@@ -11,50 +11,51 @@
     <body>
 
         <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
-          <div class="container">
-            <a class="navbar-brand" href="#">Konwerter plików LOCKBASE do APS</a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-              <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-              <ul class="navbar-nav">
-                <li class="nav-item active">
-                  <a class="nav-link" href="#">Konwerter</a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link" href="#">Archiwum zleceń</a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link" href="#">Kontakt</a>
-                </li>
-              </ul>
-            </div>
+          <a class="navbar-brand" href="#">Konwerter plików LOCKBASE do APS</a>
+          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ml-auto">
+              <li class="nav-item active">
+                <a class="nav-link" href="#">Konwerter <span class="sr-only">(current)</span></a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#">Archiwum zleceń</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#">Kontakt</a>
+              </li>
+            </ul>
           </div>
         </nav>
 
 
-        <<div class="container-fluid">
-         <div class="row">
-            <div class="col-md-6">
-                <form method="post" enctype="multipart/form-data" class="mx-auto mt-5 py-4">
-                  <div class="form-group">
-                      <label for="pdf-file">Upload CSV file:</label>
-                    <input type="file" name="file" accept="application/pdf" id="pdf_file" class="form-control-file">
-                  </div>
-                  <button type="submit" class="btn btn-primary">Wyślij PDF</button>
-                </form>
-            </div>
+        <br><br><br>
 
-            <div class="col-md-6">
-                <form action="/upload-csv" method="post" enctype="multipart/form-data">
-                      <div class="form-group">
-                        <label for="csv-file">Upload CSV file:</label>
-                        <input type="file" class="form-control-file" id="csv-file" name="csv-file" accept=".csv">
-                      </div>
-                      <button type="submit" class="btn btn-primary">Upload</button>
-                </form>
+
+        <div>
+        <form action="/upload-files" method="post" enctype="multipart/form-data">
+          <div class="row">
+            <div class="col-md-6  col-xs-2 text-center">
+              <div class="form-group">
+                <label for="pdf-file">Załaduj plik pdf zlecenia:</label>
+                <input type="file" class="form-control-file text-center" id="pdf-file" name="pdf-file" accept=".pdf">
+              </div>
             </div>
-        </div>
+            <div class="col-md-6 col-xs-2 text-center">
+              <div class="form-group">
+                <label for="csv-file">Załaduj plik CSV systemu:</label>
+                <input type="file" class="form-control-file text-center" id="csv-file" name="csv-file" accept=".csv">
+              </div>
+            </div>
+          </div>
+          <div class="row justify-content-center">
+            <div class="col-md-1 col-xs-12">
+                <button type="submit" class="btn btn-primary text-center">Wyślij</button>
+            </div>
+          </div>
+        </form>
         </div>
 
         <div class="container mt-5">
