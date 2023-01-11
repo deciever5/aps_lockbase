@@ -1,10 +1,13 @@
 {% extends "index.html" %}
 
 {% block content %}
-  <div class="container mt-5">
-    <pre class="text-break">{{ text }}</pre>
-    <br><br>
-     <pre class="text-break">{{ text2 }}</pre>
-    <br><br><br><br>
+
+  <div class="container mt-5 row justify-content-center">
+    <h2>Zawartość pliku CSV:</h2>
+     <pre class="text-break table-responsive">{{ data|safe }}</pre>
+<!--    <br><br>
+    <pre class="text-break">{{ text }}</pre>-->
+
   </div>
+<br><br><br><br>
 {% endblock %}
