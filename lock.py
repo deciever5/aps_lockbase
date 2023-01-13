@@ -1,3 +1,6 @@
+import itertools
+
+
 class Lock:
     def __init__(self, number, lock_type, length, finish, profile, quantity, pinning, body_pins, side_pins, ext_pins,
                  pin_sum):
@@ -14,7 +17,7 @@ class Lock:
         self._pin_sum = pin_sum
 
     """def __str__(self): return f'Number: {self._number}, Lock Type: {self._lock_type}, Length: {self._length}, 
-    Finish: {self._finish}, ' \ f'Profile: {self._profile}, Quantity: {self._quantity}, Body Pins: {self._body_pins}, 
+    Finish: {self._finish}, ' f'Profile: {self._profile}, Quantity: {self._quantity}, Body Pins: {self._body_pins}, 
     Side Pins: {self._side_pins}, Extension Pins: {self._ext_pin} ' """
 
     def __str__(self):
@@ -88,9 +91,22 @@ def create_locklist(df):
 
 def count_ext_pins(ext_pins, body_pins):
     body_pins_list = [i for i in body_pins]
-    ext_pins_list = [[x.replace("a", "10").replace("b", "11").replace(" ", "0") for x in k] for k in
-                     [list(j) for j in [k for k in ext_pins]]]
+    # Making a list of extension pins and replacing a,b,- with 10,11,-.
+    # Also filling missing spaces in the end with - up to body pins length
+    length = len(body_pins)
+    ext_pins_from_csv = [[x.replace("a", "10").replace("b", "11").replace(" ", "-") for x in k] for k in
+                         [list(j) for j in [k for k in ext_pins]]]
+    ext_pins_from_csv = [list(itertools.chain(pin, itertools.repeat('-', length - len(pin)))) for pin in ext_pins_from_csv]
 
-    print(body_pins_list, ext_pins_list)
+    for loc_from_back, pins in enumerate(ext_pins_from_csv[::-1]):
+        for pin_loc,pin in enumerate(pins):
+            if (loc_from_back + 1) < len(ext_pins_from_csv):
+                if pin != '-' and ext_pins_from_csv[::-1][loc_from_back + 1][pin_loc] != '-':
+                    print(pin_loc, int(pin) - int(ext_pins_from_csv[::-1][loc_from_back + 1][pin_loc]))
+            else:
+                if (pin != '-' and body_pins[pin_loc != '-']):
+                    print(pin_loc, int(pin) - int(body_pins_list[pin_loc]))
 
-    return ext_pins_list
+    print(body_pins_list, ext_pins_from_csv)
+
+    return ext_pins_from_csv
