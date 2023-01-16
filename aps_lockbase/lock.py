@@ -83,13 +83,14 @@ def create_locklist(df):
                     pin_sum)
         lock_list.append(lock)
 
-    """for lock in lock_list:
-        print(lock)"""
+    for lock in lock_list:
+        print(lock)
 
     return lock_list
 
 
-def count_ext_pins(ext_pins, body_pins):
+def count_ext_pins(some_arg,ext_pins, body_pins,*args):
+    print(ext_pins,body_pins)
     body_pins_list = [i for i in body_pins]
     # Making a list of extension pins and replacing a,b,- with 10,11,-.
     # Also filling missing spaces in the end with - up to body pins length
@@ -98,11 +99,11 @@ def count_ext_pins(ext_pins, body_pins):
                          [list(j) for j in [k for k in ext_pins]]]
     ext_pins_from_csv = [list(itertools.chain(pin, itertools.repeat('-', length - len(pin)))) for pin in ext_pins_from_csv]
 
-    for loc_from_back, pins in enumerate(ext_pins_from_csv[::-1]):
+    for idx_from_back, pins in enumerate(ext_pins_from_csv[::-1]):
         for pin_loc,pin in enumerate(pins):
-            if (loc_from_back + 1) < len(ext_pins_from_csv):
-                if pin != '-' and ext_pins_from_csv[::-1][loc_from_back + 1][pin_loc] != '-':
-                    print(pin_loc, int(pin) - int(ext_pins_from_csv[::-1][loc_from_back + 1][pin_loc]))
+            if (idx_from_back + 1) < len(ext_pins_from_csv):
+                if pin != '-' and ext_pins_from_csv[::-1][idx_from_back + 1][pin_loc] != '-':
+                    print(pin_loc, int(pin) - int(ext_pins_from_csv[::-1][idx_from_back + 1][pin_loc]))
             else:
                 if (pin != '-' and body_pins[pin_loc != '-']):
                     print(pin_loc, int(pin) - int(body_pins_list[pin_loc]))
