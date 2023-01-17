@@ -1,3 +1,5 @@
+DONE: 'Setup app server'
+DONE: 'Create interface with Bootstrap'
 
 TODO: 'csv to dataframe extraction'
 TODO: 'pdf to dataframe extraction'

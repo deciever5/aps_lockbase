@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request
-import lock
 import models
 
 app = Flask(__name__)
@@ -22,7 +21,8 @@ def upload_files():
     text = models.extract_txt_from_pdf(app, pdf_filename)
     df = models.create_df_from_csv(app, csv_filename)
 
-    return render_template('table.html', text=text, data=df.to_html(max_rows=33, header=True))
+    return render_template('table.html', text=text, data=df.to_html(max_rows=33, header=True),
+                           csv_filename=csv_filename)
 
 
 if __name__ == "__main__":

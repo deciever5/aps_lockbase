@@ -6,12 +6,22 @@
         th {
             text-align: center;
         }
+    @media (min-width: 1920px) {
+  .container {
+    max-width: 1920px;
+  }
+}
     </style>
 </head>
-  <div class="container mt-5 row justify-content-center ">
-    <h2>Zawartość pliku CSV:</h2>
+  <div class="mt-5 row justify-content-center ">
+       <h2>Zawartość pliku {{csv_filename}}:</h2>
+       <div class="container-fluid row justify-content-right mx-0 my-0 ">
+          <pre class=" table-responsive text-center">
+              {{ data|safe }}
+          </pre>
 
-     <pre class="text-break table-responsive  ">{{ data|safe }}</pre>
+         </div>
+
   </div>
 
 <br><br><br><br>
