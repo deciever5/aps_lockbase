@@ -18,8 +18,14 @@ def create_df_from_csv(app, csv_filename):
     # Creating new columns with individual pinning from All_pins column
     df['All_pins'] = df['All_pins'].str.replace('\r', '')
     df['All_pins'] = df['All_pins'].str.replace('\n', '|')
+
     df['Body_pins'] = df['All_pins'].str.split(' ').str[0]
+    # Additional operation needed for old system where side pins fields are empty
+    if (df['Body_pins'].str.contains('|')).any():
+        df['Body_pins'] = df['Body_pins'].str.split('|').str[0]
+
     df['Side_pins'] = df['All_pins'].str.split('|').str[0].str.split(' ').str[1]
+
     df['Extension_pins_sums'] = df['All_pins'].str.split('|').str[1:]
 
     # Fill all empty fields with 0 up to the lenght of body_pins
@@ -29,21 +35,25 @@ def create_df_from_csv(app, csv_filename):
 
     # Change all pins fields into lists
     df['Body_pins'] = df['Body_pins'].apply(lambda x: [i for i in x])
-    df['Side_pins'] = df['Side_pins'].apply(lambda x: [i for i in x])
+    # Additional operation needed for old system where side pins fields are empty
+    if (df['Side_pins']).any():
+        df['Side_pins'] = df['Side_pins'].apply(lambda x: [i for i in x])
+
     df['Extension_pins_sums'] = df['Extension_pins_sums'].apply(lambda x: [list(i) for i in x])
+
     # Counting proper number for extension pins, to match order style
     df['Extension_pins'] = df.apply(lambda row: ext_pins_recounting(row['Body_pins'], row['Extension_pins_sums']),
                                     axis=1)
 
     df = df.reindex(
-        columns=['Body_pins', 'Side_pins', 'Extension_pins', 'All_pins', 'Finish',
-                 'Lenght', 'Profile', 'Sys_quantity', 'Type', 'Room', 'Number'])
+        columns=['Body_pins', 'Side_pins', 'Extension_pins', 'Finish',
+                 'Lenght', 'Profile', 'Sys_quantity', 'Type', 'Number'])
 
     return df
 
 
 def ext_pins_recounting(body_pins, extension_pins_sums):
-    # Substracts previous number of pins from next element in extension_pins_sums (substract body pins for first element)
+    # Substracts previous number of pins from next element in extension_pins_sums(substract body pins for first element)
     extension_pins = [[] for _ in range(len(extension_pins_sums))]
     if extension_pins_sums:
         for idx, x in enumerate(extension_pins_sums[0]):
@@ -66,7 +76,6 @@ def ext_pins_recounting(body_pins, extension_pins_sums):
                         else:
                             extension_pins[idx] = extension_pins[idx] + ["0"]
 
-    print(extension_pins)
     return extension_pins
 
 

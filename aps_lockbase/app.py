@@ -21,7 +21,7 @@ def upload_files():
     text = models.extract_txt_from_pdf(app, pdf_filename)
     df = models.create_df_from_csv(app, csv_filename)
 
-    return render_template('table.html', text=text, data=df.to_html(max_rows=33, header=True),
+    return render_template('table.html', text=text, data=df.to_html(max_rows=30, header=True),
                            csv_filename=csv_filename)
 
 
