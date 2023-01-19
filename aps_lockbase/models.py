@@ -1,7 +1,8 @@
 import pandas as pd
 from PyPDF2 import PdfReader
 from werkzeug.utils import secure_filename
-
+import camelot
+import fitz
 
 def allowed_file(app, filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
@@ -87,7 +88,29 @@ def extract_txt_from_pdf(app, pdf_filename):
     for page_num in range(pdf_reader.numPages):
         text += pdf_reader.getPage(page_num).extractText() + '\n'
     pdf_file.close()
-    return text
+
+    # Extract the tables from the PDF file
+    tables = camelot.read_pdf(app.config['UPLOAD_FOLDER'] + pdf_filename,pages='all')
+    print (tables)
+    df_list = []
+    # Create a dataframe from the first table
+    for table in tables:
+        df_list.append(table.df)
+    df = pd.concat(df_list)
+    df = df.drop(df.columns[0], axis=1)
+    column = df.iloc[:,0]
+    column.to_csv('column.csv', index=False, header=False, sep='\n')
+
+    # Read the CSV file into a variable
+    with open('column.csv', 'r') as f:
+        data = f.read()
+
+    print(data)
+
+
+    html_table = df.to_html()
+
+    return text,html_table
 
 
 def files_save(app, pdf_file, csv_file):

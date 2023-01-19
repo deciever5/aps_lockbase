@@ -1,3 +1,21 @@
 .text-center {
     text-align: center;
 }
+        th {
+            text-align: center;
+        }
+    @media (min-width:5120px) {
+  .container {
+    max-width:5120px;
+  }
+}
+table {
+  margin: 0 auto;
+  text-align: center;
+  width: 100%;
+  tr {
+    td {
+      padding: 10px;
+    }
+  }
+}

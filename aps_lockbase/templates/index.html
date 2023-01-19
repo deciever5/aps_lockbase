@@ -1,79 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
+<head>
 
-        <meta charset="UTF-8">
-        <link rel="shortcut icon" type="image/x-icon" href="{{url_for('static', filename='favicon.ico')}}">
-        <title>LOCKBASE to APS converter</title>
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
-        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
-    </head>
+    <meta charset="UTF-8">
+    <link href="{{url_for('static', filename='favicon.ico')}}" rel="shortcut icon" type="image/x-icon">
+    <title>LOCKBASE to APS converter</title>
+    <link crossorigin="anonymous" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+          integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" rel="stylesheet">
+    <script crossorigin="anonymous"
+            integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI"
+            src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
+</head>
 
 
-    <body>
+<body>
 
-        <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
-          <a class="navbar-brand" href="#">Konwerter plików LOCKBASE do APS</a>
-          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-          </button>
-          <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ml-auto">
-              <li class="nav-item active">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+    <a class="navbar-brand" href="#">Konwerter plików LOCKBASE do APS</a>
+    <button aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation" class="navbar-toggler"
+            data-target="#navbarNav" data-toggle="collapse" type="button">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item active">
                 <a class="nav-link" href="#">Konwerter <span class="sr-only">(current)</span></a>
-              </li>
-              <li class="nav-item">
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="#">Archiwum zleceń</a>
-              </li>
-              <li class="nav-item">
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="#">Kontakt</a>
-              </li>
-            </ul>
-          </div>
-        </nav>
+            </li>
+        </ul>
+    </div>
+</nav>
 
 
-        <br><br><br>
+<br><br><br>
 
 
-        <div>
-        <form action="/upload-files" method="post" class="form-primary" enctype="multipart/form-data">
-          <div class="row " >
+<div>
+    <form action="/upload-files" class="form-primary" enctype="multipart/form-data" method="post">
+        <div class="row ">
             <div class="col-md-6  col-xs-2 text-center">
-              <div class="form-group">
-                  <label for="pdf-file">Załaduj plik <b>PDF zlecenia</b>:</label>
-                <input type="file" class="form-control-file text-center" id="pdf-file" name="pdf-file" accept=".pdf">
-              </div>
+                <div class="form-group">
+                    <label for="pdf-file">Załaduj plik <b>PDF zlecenia</b>:</label>
+                    <input accept=".pdf" class="form-control-file text-center" id="pdf-file" name="pdf-file"
+                           type="file">
+                </div>
             </div>
             <div class="col-md-6 col-xs-2 text-center">
-              <div class="form-group">
-                <label for="csv-file">Załaduj plik <b>CSV systemu</b>:</label>
-                <input type="file" class="form-control-file text-center" id="csv-file" name="csv-file" accept=".csv">
-              </div>
-            </div>
-          </div>
-          <div class="row justify-content-center">
-            <div class="col-md-1 col-sm-1 text-center">
-                <button type="submit" class="btn btn-primary text-center">Wyślij</button>
-            </div>
-          </div>
-        </form>
-        </div>
-
-        <div class="container mt-5">
-          {% block content %} {%endblock %}
-         </div>
-<br><br><br><br>
-            <footer class="bg-primary text-white py-4 fixed-bottom">
-              <div class="container">
-                <div class="row">
-                  <div class="col-12">
-                    <p class="text-center"> ASSA ABLOY &copy; </p>
-                  </div>
+                <div class="form-group">
+                    <label for="csv-file">Załaduj plik <b>CSV systemu</b>:</label>
+                    <input accept=".csv" class="form-control-file text-center" id="csv-file" name="csv-file"
+                           type="file">
                 </div>
-              </div>
-            </footer>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-md-1 col-sm-1 text-center">
+                <button class="btn btn-primary text-center" type="submit">Wyślij</button>
+            </div>
+        </div>
+    </form>
+</div>
+<div class="container mt-5">
+    {% block from_pdf %} {%endblock %}
 
-    </body>
+</div>
+<div class="container mt-5">
+    {% block content %} {%endblock %}
+</div>
+<br><br><br><br>
+<footer class="bg-primary text-white py-4 fixed-bottom">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <p class="text-center"> ASSA ABLOY &copy; </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+</body>
 </html>

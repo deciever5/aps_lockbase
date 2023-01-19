@@ -1,7 +1,7 @@
 DONE: 'Setup app server'
 DONE: 'Create interface with Bootstrap'
+DONE: 'csv to dataframe extraction'
 
-TODO: 'csv to dataframe extraction'
 TODO: 'pdf to dataframe extraction'
 TODO: 'split order into aps and non aps parts'
 TODO: 'make pdf from split order'

@@ -1,40 +1,33 @@
 {% extends "index.html" %}
 
 {% block content %}
-    <head>
+<head>
     <style>
-        th {
-            text-align: center;
-        }
-    @media (min-width:5120px) {
-  .container {
-    max-width:5120px;
-  }
-}
-table {
-  margin: 0 auto;
-  text-align: center;
-  width: 100%;
-  tr {
-    td {
-      padding: 10px;
-    }
-  }
-}
+
     </style>
 
 </head>
-  <div class="mt-2 row justify-content-center mx-auto  ">
-       <h2 class=" text-center ">Zawartość pliku {{csv_filename}}:</h2>
-          <pre class=" table-responsive ">
+
+<div class="mt-2 row justify-content-center mx-auto  ">
+    <h2 class=" text-center ">Zawartość pliku {{pdf_filename}}:</h2>
+    <pre class=" table-responsive ">
               <table class="table  ">
-                    {{ data|safe }}
+                    {{ pdf_data|safe }}
                </table>
 
           </pre>
+</div>
 
 
-  </div>
+<div class="mt-2 row justify-content-center mx-auto  ">
+    <h2 class=" text-center ">Zawartość pliku {{csv_filename}}:</h2>
+    <pre class=" table-responsive ">
+              <table class="table  ">
+                    {{ csv_data|safe }}
+               </table>
+
+          </pre>
+</div>
 
 
 {% endblock %}
