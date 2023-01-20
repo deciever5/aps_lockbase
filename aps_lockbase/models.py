@@ -130,7 +130,7 @@ def extract_text_from_pdf(app, pdf_filename):
     df = df[~df['text'].str.contains('LOCKBASE')]
     df = df[df['text'].map(len) >= 20]
     df = df.replace('\n', ' ; ', regex=True)
-    df.rename(columns={'text': system_name})
+    df = df.rename(columns={'text': system_name})
     html_table = df.to_html()
 
     return html_table
