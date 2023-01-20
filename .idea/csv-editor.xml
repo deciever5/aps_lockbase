@@ -10,6 +10,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\aps_lockbase\archive\941_000-rozb.2.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\aps_lockbase\archive\C22_455_rozb.3.csv">
           <value>
             <Attribute>

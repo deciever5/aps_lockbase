@@ -1,13 +1,9 @@
-from io import StringIO
-
-import camelot
 import pandas as pd
-from PyPDF2 import PdfReader
-from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.converter import PDFPageAggregator
 from pdfminer.layout import LAParams, LTTextBox, LTTextLine
-from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfdocument import PDFTextExtractionNotAllowed
+from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+from pdfminer.pdfpage import PDFPage
 from werkzeug.utils import secure_filename
 
 
@@ -57,7 +53,8 @@ def create_df_from_csv(app, csv_filename):
         columns=['Body_pins', 'Side_pins', 'Extension_pins', 'Finish',
                  'Lenght', 'Profile', 'Sys_quantity', 'Type', 'Number'])
 
-    return df
+    table_from_csv = df.to_html(max_rows=30, header=True)
+    return table_from_csv
 
 
 def ext_pins_recounting(body_pins, extension_pins_sums):
@@ -87,34 +84,6 @@ def ext_pins_recounting(body_pins, extension_pins_sums):
     return extension_pins
 
 
-def extract_txt_from_pdf(app, pdf_filename):
-    # Extract the text from the order PDF file
-    pdf_file = open(app.config['UPLOAD_FOLDER'] + pdf_filename, 'rb')
-    pdf_reader = PdfReader(pdf_file)
-    text = ''
-    for page_num in range(pdf_reader.numPages):
-        text += pdf_reader.getPage(page_num).extractText() + '\n'
-    pdf_file.close()
-
-    # Extract the tables from the PDF file
-    tables = camelot.read_pdf(app.config['UPLOAD_FOLDER'] + pdf_filename, pages='all')
-    print(tables)
-    df_list = []
-    # Create a dataframe from the first table
-    for table in tables:
-        df_list.append(table.df)
-    df = pd.concat(df_list)
-    df = df.drop(df.columns[0], axis=1)
-    column = df.iloc[:, 0]
-    column.to_csv('column.csv', index=False, header=False, sep='\n')
-    #html_table = df.to_html()
-
-    html_table = (extract_text_location(app.config['UPLOAD_FOLDER'] + pdf_filename)).to_html()
-
-    return text, html_table
-
-
-
 def files_save(app, pdf_file, csv_file):
     # Extract and store in archive system pdf and odrer csv
     if pdf_file and allowed_file(app, pdf_file.filename) and csv_file and allowed_file(app, csv_file.filename):
@@ -126,16 +95,16 @@ def files_save(app, pdf_file, csv_file):
     else:
         return False
 
-def extract_text_location(pdf_path):
+
+def extract_text_from_pdf(app, pdf_filename):
+    # Extract the text from the order PDF file
+    pdf_path = app.config['UPLOAD_FOLDER'] + pdf_filename
     text_location = []
+    # Extract text with its location coordinates and save them to a dataframe
     with open(pdf_path, 'rb') as pdf_file:
-        # Create resource manager
         resource_manager = PDFResourceManager()
-        # Set parameters for analysis
         laparams = LAParams()
-        # Create a PDF page aggregator object
         device = PDFPageAggregator(resource_manager, laparams=laparams)
-        # Create a PDF interpreter object
         interpreter = PDFPageInterpreter(resource_manager, device)
 
         for page in PDFPage.get_pages(pdf_file):
@@ -147,10 +116,18 @@ def extract_text_location(pdf_path):
             for element in layout:
                 if isinstance(element, LTTextBox) or isinstance(element, LTTextLine):
                     text_location.append((element.get_text(), element.bbox))
+    df = pd.DataFrame(text_location, columns=['text', 'location'])
 
-    text_dataframe = pd.DataFrame(text_location, columns=['text', 'location'])
-    text_dataframe['left'] = text_dataframe['location'].apply(lambda x: x[0])
-    text_dataframe['bottom'] = text_dataframe['location'].apply(lambda x: x[1])
-    text_dataframe['right'] = text_dataframe['location'].apply(lambda x: x[2])
-    text_dataframe['top'] = text_dataframe['location'].apply(lambda x: x[3])
-    return text_dataframe
+    # Get name of the system which is in first row of first column after "System:"
+    header = df.iloc[0, 0].split("\n")
+    for part in header:
+        if "System:" in part:
+            system_name = part[8:].strip()
+    # Filter first column by system name, drop other columns
+    df = df[df['text'].str.contains(system_name)].iloc[:, 0:1]
+    df_shifted = df.shift(-4)
+    df = pd.concat([df, df_shifted], axis=0)
+    df.rename(columns={'text': system_name}, inplace=True)
+    html_table = df.to_html()
+
+    return html_table
