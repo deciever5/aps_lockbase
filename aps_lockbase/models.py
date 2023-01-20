@@ -50,8 +50,8 @@ def create_df_from_csv(app, csv_filename):
                                     axis=1)
 
     df = df.reindex(
-        columns=['Body_pins', 'Side_pins', 'Extension_pins', 'Finish',
-                 'Lenght', 'Profile', 'Sys_quantity', 'Type', 'Number'])
+        columns=['Number', 'Finish', 'Lenght', 'Profile', 'Sys_quantity', 'Type', 'Body_pins', 'Side_pins',
+                 'Extension_pins'])
 
     table_from_csv = df.to_html(max_rows=30, header=True)
     return table_from_csv
@@ -124,10 +124,13 @@ def extract_text_from_pdf(app, pdf_filename):
         if "System:" in part:
             system_name = part[8:].strip()
     # Filter first column by system name, drop other columns
-    df = df[df['text'].str.contains(system_name)].iloc[:, 0:1]
-    df_shifted = df.shift(-4)
-    df = pd.concat([df, df_shifted], axis=0)
-    df.rename(columns={'text': system_name}, inplace=True)
+    # Droping all lines to short (usually grid lines) and those containing LOCKBASE
+
+    df = df[df['text'].str.contains(system_name)].iloc[:, 0:1].reset_index(drop=True)
+    df = df[~df['text'].str.contains('LOCKBASE')]
+    df = df[df['text'].map(len) >= 20]
+    df = df.replace('\n', ' ; ', regex=True)
+    df.rename(columns={'text': system_name})
     html_table = df.to_html()
 
     return html_table
