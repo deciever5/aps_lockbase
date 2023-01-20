@@ -1,8 +1,15 @@
+from io import StringIO
+
+import camelot
 import pandas as pd
 from PyPDF2 import PdfReader
+from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+from pdfminer.converter import PDFPageAggregator
+from pdfminer.layout import LAParams, LTTextBox, LTTextLine
+from pdfminer.pdfpage import PDFPage
+from pdfminer.pdfdocument import PDFTextExtractionNotAllowed
 from werkzeug.utils import secure_filename
-import camelot
-import fitz
+
 
 def allowed_file(app, filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
@@ -90,27 +97,22 @@ def extract_txt_from_pdf(app, pdf_filename):
     pdf_file.close()
 
     # Extract the tables from the PDF file
-    tables = camelot.read_pdf(app.config['UPLOAD_FOLDER'] + pdf_filename,pages='all')
-    print (tables)
+    tables = camelot.read_pdf(app.config['UPLOAD_FOLDER'] + pdf_filename, pages='all')
+    print(tables)
     df_list = []
     # Create a dataframe from the first table
     for table in tables:
         df_list.append(table.df)
     df = pd.concat(df_list)
     df = df.drop(df.columns[0], axis=1)
-    column = df.iloc[:,0]
+    column = df.iloc[:, 0]
     column.to_csv('column.csv', index=False, header=False, sep='\n')
+    #html_table = df.to_html()
 
-    # Read the CSV file into a variable
-    with open('column.csv', 'r') as f:
-        data = f.read()
+    html_table = (extract_text_location(app.config['UPLOAD_FOLDER'] + pdf_filename)).to_html()
 
-    print(data)
+    return text, html_table
 
-
-    html_table = df.to_html()
-
-    return text,html_table
 
 
 def files_save(app, pdf_file, csv_file):
@@ -123,3 +125,32 @@ def files_save(app, pdf_file, csv_file):
         return pdf_filename, csv_filename
     else:
         return False
+
+def extract_text_location(pdf_path):
+    text_location = []
+    with open(pdf_path, 'rb') as pdf_file:
+        # Create resource manager
+        resource_manager = PDFResourceManager()
+        # Set parameters for analysis
+        laparams = LAParams()
+        # Create a PDF page aggregator object
+        device = PDFPageAggregator(resource_manager, laparams=laparams)
+        # Create a PDF interpreter object
+        interpreter = PDFPageInterpreter(resource_manager, device)
+
+        for page in PDFPage.get_pages(pdf_file):
+            try:
+                interpreter.process_page(page)
+            except PDFTextExtractionNotAllowed:
+                continue
+            layout = device.get_result()
+            for element in layout:
+                if isinstance(element, LTTextBox) or isinstance(element, LTTextLine):
+                    text_location.append((element.get_text(), element.bbox))
+
+    text_dataframe = pd.DataFrame(text_location, columns=['text', 'location'])
+    text_dataframe['left'] = text_dataframe['location'].apply(lambda x: x[0])
+    text_dataframe['bottom'] = text_dataframe['location'].apply(lambda x: x[1])
+    text_dataframe['right'] = text_dataframe['location'].apply(lambda x: x[2])
+    text_dataframe['top'] = text_dataframe['location'].apply(lambda x: x[3])
+    return text_dataframe
