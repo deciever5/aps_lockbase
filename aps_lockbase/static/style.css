@@ -19,3 +19,7 @@ table {
     }
   }
 }
+.fields-container {
+      display: flex;
+      flex-wrap: nowrap;
+}

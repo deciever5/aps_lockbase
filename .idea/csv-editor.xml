@@ -17,6 +17,27 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\aps_lockbase\archive\C14_219_rozb.25.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\aps_lockbase\archive\C14_340_rozb.4.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\aps_lockbase\archive\C22_269_Rozb_1.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\aps_lockbase\archive\C22_455_rozb.3.csv">
           <value>
             <Attribute>

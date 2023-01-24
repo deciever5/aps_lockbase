@@ -163,11 +163,19 @@ def add_order_pinning(order_df, system_df):
     merged_df.drop(columns=['Others', 'Date', 'Sys_quantity'], inplace=True)
     return merged_df
 
-def get_order_details(df):
-    unique_values_list = df.Type.unique().tolist()
-    print(unique_values_list)
-    pass
 
-def create_aps_file(order_df, system_df):
-    aps_file = None
-    return aps_file
+def get_order_types(df):
+    order_types = df.Type.unique().tolist()
+    return order_types
+
+
+def create_aps_file(automatic):
+    return 'success'
+
+def create_aps_pdf(automatic):
+    return 'success'
+
+def creat_non_aps_pdf(manual):
+    return 'success'
+
+

@@ -1,0 +1,123 @@
+ {% extends "index.html" %}
+
+{% block content %}
+
+<head>
+    <title>Contact Us</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" integrity="sha512-+4zCK9k+qNFUR5X+cKL9EIR+ZOhtIloNl9GIKS57V1MyNsYpYcUrUeQc9vNfzsWfV28IaLL3i96P9sdNyeRssA==" crossorigin="anonymous" />
+    <style>
+        /* Add your own custom styles here */
+        .contact-section {
+            background-color: #f9f9f9;
+            padding: 50px 0;
+        }
+        .contact-section h2 {
+            font-size: 36px;
+            margin-bottom: 30px;
+        }
+        .contact-info {
+            margin-bottom: 20px;
+        }
+        .contact-info i {
+            font-size: 32px;
+            color: #0275d8;
+            margin-right: 15px;
+        }
+        .social-icons {
+            margin-top: 25px;
+        }
+        .social-icons a {
+            font-size: 32px;
+            margin-right: 15px;
+color: #0275d8;
+transition: all 0.3s ease-in-out;
+}
+.social-icons a:hover {
+color: #333;
+text-decoration: none;
+}
+.form-control {
+border-radius: 0;
+border: 2px solid #ccc;
+padding: 12px 20px;
+font-size: 18px;
+margin-bottom: 20px;
+box-shadow: none;
+}
+.form-control:focus {
+border-color: #0275d8;
+box-shadow: none;
+}
+.form-control::placeholder {
+color: #ccc;
+font-size: 18px;
+}
+textarea.form-control {
+height: 200px;
+}
+.form-group button[type="submit"] {
+background-color: #0275d8;
+border: none;
+color: #fff;
+padding: 12px 40px;
+font-size: 20px;
+border-radius: 50px;
+transition: all 0.3s ease-in-out;
+}
+.form-group button[type="submit"]:hover {
+background-color: #01447e;
+cursor: pointer;
+}
+</style>
+</head>
+<body>
+    <section class="contact-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h2>Get in Touch</h2>
+                    <form>
+                        <div class="form-group">
+                            <input type="text" class="form-control" id="name" placeholder="Name" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="email" class="form-control" id="email" placeholder="Email" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="tel" class="form-control" id="phone" placeholder="Phone">
+                        </div>
+                        <div class="form-group">
+                            <textarea class="form-control" id="message" rows="3" placeholder="Message" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <h2>Contact Information</h2>
+                    <div class="contact-info">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <p>1234 Example St, Anytown USA</p>
+                    </div>
+                    <div class="contact-info">
+                        <i class="fas fa-phone"></i>
+                        <p>+1 (555) 555-5555</p>
+                    </div>
+                    <div class="contact-info">
+                        <i class="fas fa-envelope"></i>
+                        <p>info@yourwebsite.com</p>
+                    </div>
+                    <div class="social-icons">
+                        <a href="#"><i class="fab fa-facebook-square"></i></a>
+<a href="#"><i class="fab fa-twitter-square"></i></a>
+<a href="#"><i class="fab fa-instagram"></i></a>
+<a href="#"><i class="fab fa-linkedin"></i></a>
+</div>
+</div>
+</div>
+</div>
+</section>
+</body>
+
+
+{% endblock %}
