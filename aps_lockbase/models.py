@@ -14,8 +14,9 @@ def allowed_file(app, filename):
 def create_df_from_csv(app, csv_filename):
     df = pd.read_csv(app.config['UPLOAD_FOLDER'] + csv_filename, delimiter=';', encoding='ANSI')
     # Chosing and naming colums needed for an order
-    df = df.iloc[:, [2, 3, 7, 11, 13, 14, 17, 18]]
-    df.columns = ['Room', 'Finish', 'Lenght', 'All_pins', 'Profile', 'Sys_quantity', 'Number', 'Type']
+    df = df.iloc[:, [2, 3, 7, 11, 12, 13, 14, 15, 17, 18]]
+    df.columns = ['Room', 'Finish', 'Lenght', 'All_pins', 'Date', 'Profile', 'Sys_quantity', 'Special_eq', 'Number',
+                  'Type']
     # Removing all columns not containing system combinations
     df = df.dropna(subset=['Number']).reset_index(drop=True)
 
@@ -50,11 +51,19 @@ def create_df_from_csv(app, csv_filename):
                                     axis=1)
 
     df = df.reindex(
-        columns=['Number', 'Finish', 'Lenght', 'Profile', 'Sys_quantity', 'Type', 'Body_pins', 'Side_pins',
-                 'Extension_pins'])
+        columns=['Number', 'Finish', 'Lenght', 'Profile', 'Sys_quantity', 'Type', 'Special_eq', 'Body_pins',
+                 'Side_pins',
+                 'Extension_pins', 'Date'])
+    # in case of duplicates drop older row
+    df.sort_values(by='Date', ascending=False, inplace=True)
+    df.drop_duplicates(subset=['Number', 'Finish', 'Lenght', 'Profile', 'Type', 'Special_eq'], keep='first',
+                       inplace=True)
+    df.sort_values(by='Number', ascending=True, inplace=True)
 
-    table_from_csv = df.to_html(max_rows=30, header=True)
-    return table_from_csv
+    # replace NaN values with empty string and change all types to object for comparision with order df
+    df.fillna(value='', inplace=True)
+    df = df.astype(object)
+    return df
 
 
 def ext_pins_recounting(body_pins, extension_pins_sums):
@@ -96,7 +105,7 @@ def files_save(app, pdf_file, csv_file):
         return False
 
 
-def extract_text_from_pdf(app, pdf_filename):
+def pdf_to_dataframe(app, pdf_filename):
     # Extract the text from the order PDF file
     pdf_path = app.config['UPLOAD_FOLDER'] + pdf_filename
     text_location = []
@@ -106,7 +115,7 @@ def extract_text_from_pdf(app, pdf_filename):
         laparams = LAParams()
         device = PDFPageAggregator(resource_manager, laparams=laparams)
         interpreter = PDFPageInterpreter(resource_manager, device)
-
+        # Extracting text and its location coordinates
         for page in PDFPage.get_pages(pdf_file):
             try:
                 interpreter.process_page(page)
@@ -117,20 +126,48 @@ def extract_text_from_pdf(app, pdf_filename):
                 if isinstance(element, LTTextBox) or isinstance(element, LTTextLine):
                     text_location.append((element.get_text(), element.bbox))
     df = pd.DataFrame(text_location, columns=['text', 'location'])
-
     # Get name of the system which is in first row of first column after "System:"
     header = df.iloc[0, 0].split("\n")
+    system_name = ''
     for part in header:
         if "System:" in part:
             system_name = part[8:].strip()
-    # Filter first column by system name, drop other columns
-    # Droping all lines to short (usually grid lines) and those containing LOCKBASE
+    df.name = system_name
 
+    # Filter first column by system name, drop other columns
+    # Droping all lines too short (usually grid lines of system) and those containing LOCKBASE
     df = df[df['text'].str.contains(system_name)].iloc[:, 0:1].reset_index(drop=True)
     df = df[~df['text'].str.contains('LOCKBASE')]
     df = df[df['text'].map(len) >= 20]
-    df = df.replace('\n', ' ; ', regex=True)
-    df = df.rename(columns={'text': system_name})
-    html_table = df.to_html()
 
-    return html_table
+    # Split the string into list and furhter into columns
+    def split_string(string):
+        return string.split("\n")
+
+    new_df = df['text'].apply(split_string)
+    new_df = pd.DataFrame(new_df.tolist(), index=new_df.index)
+    df = pd.concat([df, new_df], axis=1)
+    df.drop('text', axis=1, inplace=True)
+    df.columns = df.columns.astype(str)
+    df = df.rename(
+        columns={'0': 'Number', '3': 'Finish', '2': 'Lenght', '4': 'Profile', '5': 'Order_quantity', '1': 'Type',
+                 '6': 'Special_eq', '7': 'Others'})
+    df = df.reindex(
+        columns=['Number', 'Finish', 'Lenght', 'Profile', 'Order_quantity', 'Type', 'Special_eq', 'Others'])
+    df = df.astype(object)
+    return df
+
+
+def add_order_pinning(order_df, system_df):
+    merged_df = pd.merge(order_df, system_df, on=['Number', 'Finish', 'Lenght', 'Profile', 'Type', 'Special_eq'])
+    merged_df.drop(columns=['Others', 'Date', 'Sys_quantity'], inplace=True)
+    return merged_df
+
+def get_order_details(df):
+    unique_values_list = df.Type.unique().tolist()
+    print(unique_values_list)
+    pass
+
+def create_aps_file(order_df, system_df):
+    aps_file = None
+    return aps_file

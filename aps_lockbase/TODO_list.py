@@ -1,12 +1,13 @@
 DONE: 'Setup app server'
 DONE: 'Create interface with Bootstrap'
 DONE: 'csv to dataframe extraction'
+DONE: 'pdf to dataframe extraction'
+DONE: 'get data of pinning for order from system'
 
-TODO: 'pdf to dataframe extraction'
 TODO: 'split order into aps and non aps parts'
+TODO: 'make aps file from order'
 TODO: 'make pdf from split order'
 TODO: 'make test with systems from csv -optionally extract all posiblle systems from LOCKBASE'
-TODO: 'make aps file from order'
 TODO: 'unitest of aps files - comparision with orders'
 
 """    /yourapp  
