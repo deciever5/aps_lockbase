@@ -1,11 +1,15 @@
 import pandas as pd
+import logging
 from pdfminer.converter import PDFPageAggregator
 from pdfminer.layout import LAParams, LTTextBox, LTTextLine
 from pdfminer.pdfdocument import PDFTextExtractionNotAllowed
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from werkzeug.utils import secure_filename
-
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.lib.units import inch
 
 def allowed_file(app, filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
@@ -150,17 +154,19 @@ def pdf_to_dataframe(app, pdf_filename):
     df.drop('text', axis=1, inplace=True)
     df.columns = df.columns.astype(str)
     df = df.rename(
-        columns={'0': 'Number', '3': 'Finish', '2': 'Lenght', '4': 'Profile', '5': 'Order_quantity', '1': 'Type',
+        columns={'0': 'Number', '3': 'Finish', '2': 'Lenght', '4': 'Profile', '5': 'Quantity', '1': 'Type',
                  '6': 'Special_eq', '7': 'Others'})
     df = df.reindex(
-        columns=['Number', 'Finish', 'Lenght', 'Profile', 'Order_quantity', 'Type', 'Special_eq', 'Others'])
+        columns=['Number', 'Finish', 'Lenght', 'Profile', 'Quantity', 'Type', 'Special_eq', 'Others'])
     df = df.astype(object)
     return df
 
 
 def add_order_pinning(order_df, system_df):
+    # Adds pinns to order from pdf by merging with system dataframe
     merged_df = pd.merge(order_df, system_df, on=['Number', 'Finish', 'Lenght', 'Profile', 'Type', 'Special_eq'])
     merged_df.drop(columns=['Others', 'Date', 'Sys_quantity'], inplace=True)
+    merged_df.index += 1
     return merged_df
 
 
@@ -168,14 +174,45 @@ def get_order_types(df):
     order_types = df.Type.unique().tolist()
     return order_types
 
+def create_aps_file(df, path):
 
-def create_aps_file(automatic):
-    return 'success'
+    """
+        Generate an APS file from a DataFrame and save it to the specified path.
+        :param df: DataFrame containing the data
+        :param path: Path to save the APS file
+        """
+    data = ""
+    # for i in range(len(df)):
+    #     data += df.at[i, 'Number'] + " " + df.at[i, 'Name'] + " " + df.at[i, 'Type'] + "\n"
+    # with open(path, 'w') as f:
+    #     print(f"APS file saved to {path}")
+    return '--aps file created successfully-- '
 
 def create_aps_pdf(automatic):
-    return 'success'
+    df = automatic
+
+    pdf_file = 'data.pdf'
+    doc = SimpleDocTemplate(pdf_file, pagesize=letter)
+
+    data = [df.columns] + df.values.tolist()
+
+    table = Table(data, colWidths=[1.5 * inch] * 5)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.gray),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+
+    doc.build([table])
+
+
+    return '--aps pdf file created successfully-- '
 
 def creat_non_aps_pdf(manual):
-    return 'success'
+    return ' --non aps pdf file created successfully-- '
 
 

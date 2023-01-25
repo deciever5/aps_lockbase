@@ -76,42 +76,41 @@ cursor: pointer;
         <div class="container">
             <div class="row">
                 <div class="col-md-6">
-                    <h2>Get in Touch</h2>
-                    <form>
+                    <h2>Skontaktuj się</h2>
+                    <form class="contact-form" method="POST" action="{{url_for('contact')}}">
                         <div class="form-group">
-                            <input type="text" class="form-control" id="name" placeholder="Name" required>
+                            <input type="text" class="form-control" id="name" placeholder="Imię" required>
                         </div>
                         <div class="form-group">
                             <input type="email" class="form-control" id="email" placeholder="Email" required>
                         </div>
                         <div class="form-group">
-                            <input type="tel" class="form-control" id="phone" placeholder="Phone">
+                            <input type="tel" class="form-control" id="phone" placeholder="Telefon">
                         </div>
                         <div class="form-group">
-                            <textarea class="form-control" id="message" rows="3" placeholder="Message" required></textarea>
+                            <textarea class="form-control" id="message" rows="3" placeholder="Wiadomość" required></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary">Send Message</button>
+                        <button type="submit" class="btn btn-primary">Wyślij wiadomość</button>
                     </form>
                 </div>
                 <div class="col-md-6">
-                    <h2>Contact Information</h2>
+                    <h2>Informacja kontaktowa</h2>
                     <div class="contact-info">
                         <i class="fas fa-map-marker-alt"></i>
-                        <p>1234 Example St, Anytown USA</p>
+                         <p>Assa Abloy Opening Solutions Poland</p>
+                        <p>64-100 Leszno,ul. Magazynowa 4, Polska</p>
+                        <p>Marcin Kunikowski, Manager ds. automatyzacji</p>
                     </div>
                     <div class="contact-info">
                         <i class="fas fa-phone"></i>
-                        <p>+1 (555) 555-5555</p>
+                        <p>+48 666 079 638 wew. 817</p>
                     </div>
                     <div class="contact-info">
                         <i class="fas fa-envelope"></i>
-                        <p>info@yourwebsite.com</p>
+                        <p>marcin.kunikowski@assaabloy.com</p>
                     </div>
                     <div class="social-icons">
-                        <a href="#"><i class="fab fa-facebook-square"></i></a>
-<a href="#"><i class="fab fa-twitter-square"></i></a>
-<a href="#"><i class="fab fa-instagram"></i></a>
-<a href="#"><i class="fab fa-linkedin"></i></a>
+
 </div>
 </div>
 </div>

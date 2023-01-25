@@ -1,24 +1,52 @@
+import logging
 import os
+import smtplib
 from datetime import datetime
+
 import pandas as pd
-from flask import Flask, render_template, request, url_for
+from flask import Flask, render_template, request
+
 import models
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'aps_lockbase/static/archive/'
+app.config['APS_FOLDER'] = 'aps_lockbase/static/aps/'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'csv'}
-
+app.logger.setLevel(logging.DEBUG)
+logging.basicConfig(filename='debug.log',
+                level=logging.ERROR, format='%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s')
 
 @app.route('/', methods=['GET'])
 def index():
     return render_template('upload.html')
 
-@app.route('/contact', methods=['GET'])
+
+@app.route('/contact', methods=['GET', 'POST'])
 def contact():
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        phone = request.form['phone']
+        message = request.form['message']
+
+        # Create the email message
+        msg = f"Name: {name}\nEmail: {email}\nPhone: {phone}\n\n{message}"
+        print(msg)
+        # Send the email
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login("sender@example.com", "password")
+        server.sendmail("sender@example.com", "recipient@example.com", msg)
+        server.quit()
+
+        return render_template('contact.html', success=True)
+
     return render_template('contact.html')
+
 
 @app.route('/archive', methods=['GET'])
 def archive():
+    # Grabs and displays all files in archive folder
     archive_path = os.path.join(app.root_path, 'static', 'archive')
     files = []
     for file in os.listdir(archive_path):
@@ -45,17 +73,14 @@ def upload_files():
     order_with_pinning = models.add_order_pinning(order_df, system_df)
     order_with_pinning.to_pickle('order_with_pinning.pkl')
 
-    table_from_pdf = order_df.to_html(max_rows=30, header=True)
-    table_from_system_csv = system_df.to_html(max_rows=30, header=True)
-    table_from_order = order_with_pinning.to_html(max_rows=30, header=True)
     order_types = models.get_order_types(order_with_pinning)
 
-    return render_template('aps_options.html', csv_data=table_from_system_csv, pdf_data=table_from_pdf,
-                           csv_filename=csv_filename, order_data=table_from_order, pdf_filename=pdf_filename,
+    return render_template('aps_options.html', csv_filename=csv_filename, order_data=order_with_pinning,
+                           pdf_filename=pdf_filename,
                            fields=order_types)
 
 
-@app.route('/create_aps', methods=['POST'])
+@app.route('/create_aps_file', methods=['POST'])
 def aps_file_maker():
     # Get lock types to be made on APS
     selected_fields = []
@@ -67,18 +92,13 @@ def aps_file_maker():
     automatic = order_with_pinning[order_with_pinning['Type'].isin(selected_fields)]
     manual = order_with_pinning[~order_with_pinning['Type'].isin(selected_fields)]
 
-    table_from_automatic = automatic.to_html(max_rows=30, header=True)
-    table_from_manual = manual.to_html(max_rows=30, header=True)
-
-    aps_file = models.create_aps_file(automatic)
+    aps_file = models.create_aps_file(automatic, app.config['APS_FOLDER'])
     aps_pdf = models.create_aps_pdf(automatic)
     non_aps_pdf = models.creat_non_aps_pdf(manual)
 
-    print(aps_pdf,aps_file,non_aps_pdf)
+    print(aps_pdf, aps_file, non_aps_pdf)
 
-    #print(f'selected = {selected_fields}')
-
-    return render_template('aps_conversion.html', automatic_data = table_from_automatic, manual_data = table_from_manual)
+    return render_template('aps_conversion.html', automatic_data=automatic, manual_data=manual)
 
 
 if __name__ == "__main__":
