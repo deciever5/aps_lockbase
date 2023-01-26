@@ -1,5 +1,4 @@
 import pandas as pd
-import logging
 from pdfminer.converter import PDFPageAggregator
 from pdfminer.layout import LAParams, LTTextBox, LTTextLine
 from pdfminer.pdfdocument import PDFTextExtractionNotAllowed
@@ -10,6 +9,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib.units import inch
+from datetime import datetime
 
 def allowed_file(app, filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
@@ -25,9 +25,7 @@ def create_df_from_csv(app, csv_filename):
     df = df.dropna(subset=['Number']).reset_index(drop=True)
 
     # Creating new columns with individual pinning from All_pins column
-    df['All_pins'] = df['All_pins'].str.replace('\r', '')
-    df['All_pins'] = df['All_pins'].str.replace('\n', '|')
-
+    df['All_pins'] = df['All_pins'].str.replace('\r', '').str.replace('\n', '|')
     df['Body_pins'] = df['All_pins'].str.split(' ').str[0]
     # Additional operation needed for old system where side pins fields are empty
     if (df['Body_pins'].str.contains('|')).any():
@@ -72,28 +70,9 @@ def create_df_from_csv(app, csv_filename):
 
 def ext_pins_recounting(body_pins, extension_pins_sums):
     # Substracts previous number of pins from next element in extension_pins_sums(substract body pins for first element)
-    extension_pins = [[] for _ in range(len(extension_pins_sums))]
-    if extension_pins_sums:
-        for idx, x in enumerate(extension_pins_sums[0]):
-            y = body_pins[idx]
-            x = x.replace('a', '10').replace('b', '11')
-            y = y.replace('a', '10').replace('b', '11')
-            if x != "0":
-                extension_pins[0].append(int(x) - int(y))
-            else:
-                extension_pins[0].append("0")
-        if len(extension_pins_sums) > 1:
-            for idx, pins in enumerate(extension_pins_sums):
-                if idx > 0:
-                    for inner_idx, x in enumerate(pins):
-                        y = extension_pins_sums[idx - 1][inner_idx]
-                        x = x.replace('a', '10').replace('b', '11')
-                        y = y.replace('a', '10').replace('b', '11')
-                        if x != "0":
-                            extension_pins[idx] = extension_pins[idx] + [int(x) - int(y)]
-                        else:
-                            extension_pins[idx] = extension_pins[idx] + ["0"]
-
+    extension_pins = [[int(x.replace('a', '10').replace('b', '11')) - int(y.replace('a', '10').replace('b', '11'))
+                       if x != "0" else "0" for x, y in zip(extension_pins_sums[0], body_pins)]
+                      for _ in extension_pins_sums]
     return extension_pins
 
 
@@ -136,7 +115,6 @@ def pdf_to_dataframe(app, pdf_filename):
     for part in header:
         if "System:" in part:
             system_name = part[8:].strip()
-    df.name = system_name
 
     # Filter first column by system name, drop other columns
     # Droping all lines too short (usually grid lines of system) and those containing LOCKBASE
@@ -158,15 +136,20 @@ def pdf_to_dataframe(app, pdf_filename):
                  '6': 'Special_eq', '7': 'Others'})
     df = df.reindex(
         columns=['Number', 'Finish', 'Lenght', 'Profile', 'Quantity', 'Type', 'Special_eq', 'Others'])
+
     df = df.astype(object)
+    df.loc['System'] =system_name
     return df
 
 
 def add_order_pinning(order_df, system_df):
+
     # Adds pinns to order from pdf by merging with system dataframe
     merged_df = pd.merge(order_df, system_df, on=['Number', 'Finish', 'Lenght', 'Profile', 'Type', 'Special_eq'])
     merged_df.drop(columns=['Others', 'Date', 'Sys_quantity'], inplace=True)
     merged_df.index += 1
+    merged_df.loc['System'] = order_df.loc['System']
+
     return merged_df
 
 
@@ -174,19 +157,27 @@ def get_order_types(df):
     order_types = df.Type.unique().tolist()
     return order_types
 
-def create_aps_file(df, path):
 
+def create_aps_file(df, path):
     """
-        Generate an APS file from a DataFrame and save it to the specified path.
-        :param df: DataFrame containing the data
+        Generate an APS file from 'automatic' DataFrame and save it to the specified path.
+        :param df: DataFrame containing the data for APS
         :param path: Path to save the APS file
         """
-    data = ""
-    # for i in range(len(df)):
-    #     data += df.at[i, 'Number'] + " " + df.at[i, 'Name'] + " " + df.at[i, 'Type'] + "\n"
-    # with open(path, 'w') as f:
-    #     print(f"APS file saved to {path}")
+
+def create_aps_file(df, file_path):
+    table_name = df.loc['System','Number']
+
+    today = datetime.today().date()
+    with open(file_path, 'r') as file:
+        file.write(f"{table_name} - {today}\n")
+        for row in df.itertuples(index=False):
+            file.write("/n".join(row))
+            file.write("\n")
+        print(file)
+
     return '--aps file created successfully-- '
+
 
 def create_aps_pdf(automatic):
     df = automatic
@@ -207,12 +198,10 @@ def create_aps_pdf(automatic):
         ('GRID', (0, 0), (-1, -1), 1, colors.black)
     ]))
 
-    doc.build([table])
-
+    # doc.build([table])
 
     return '--aps pdf file created successfully-- '
 
+
 def creat_non_aps_pdf(manual):
     return ' --non aps pdf file created successfully-- '
-
-
