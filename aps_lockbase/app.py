@@ -8,8 +8,9 @@ from flask import Flask, render_template, request
 import models
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'aps_lockbase/static/archive/'
-app.config['APS_FOLDER'] = 'aps_lockbase/static/archive'
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static\\archive\\')
+app.config['APS_FOLDER'] = os.path.join(basedir, 'static\\aps\\')
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'csv'}
 
 
@@ -53,7 +54,7 @@ def aps_file_maker():
 
     aps_file = models.create_aps_file(automatic, app.config['APS_FOLDER'])
     aps_pdf = models.create_aps_pdf(automatic)
-    non_aps_pdf = models.creat_non_aps_pdf(manual)
+    non_aps_pdf = models.create_non_aps_pdf(manual)
 
     print(aps_pdf, aps_file, non_aps_pdf)
 
