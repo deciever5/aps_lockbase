@@ -1,20 +1,16 @@
-import logging
 import os
 import smtplib
 from datetime import datetime
 
 import pandas as pd
-from flask import Flask, render_template, request, url_for
+from flask import Flask, render_template, request
 
 import models
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'aps_lockbase/static/archive/'
-app.config['APS_FOLDER'] = 'D:\_INNE'
+app.config['APS_FOLDER'] = 'aps_lockbase/static/archive'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'csv'}
-app.logger.setLevel(logging.DEBUG)
-logging.basicConfig(filename='debug.log',
-                    level=logging.DEBUG, format='%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s')
 
 
 @app.route('/', methods=['GET'])

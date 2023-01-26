@@ -11,6 +11,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib.units import inch
 from datetime import datetime
 
+
 def allowed_file(app, filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
@@ -138,12 +139,11 @@ def pdf_to_dataframe(app, pdf_filename):
         columns=['Number', 'Finish', 'Lenght', 'Profile', 'Quantity', 'Type', 'Special_eq', 'Others'])
 
     df = df.astype(object)
-    df.loc['System'] =system_name
+    df.loc['System'] = system_name
     return df
 
 
 def add_order_pinning(order_df, system_df):
-
     # Adds pinns to order from pdf by merging with system dataframe
     merged_df = pd.merge(order_df, system_df, on=['Number', 'Finish', 'Lenght', 'Profile', 'Type', 'Special_eq'])
     merged_df.drop(columns=['Others', 'Date', 'Sys_quantity'], inplace=True)
@@ -158,23 +158,9 @@ def get_order_types(df):
     return order_types
 
 
-def create_aps_file(df, path):
-    """
-        Generate an APS file from 'automatic' DataFrame and save it to the specified path.
-        :param df: DataFrame containing the data for APS
-        :param path: Path to save the APS file
-        """
-
 def create_aps_file(df, file_path):
-    table_name = df.loc['System','Number']
-
+    table_name = df.loc['System', 'Number']
     today = datetime.today().date()
-    with open(file_path, 'r') as file:
-        file.write(f"{table_name} - {today}\n")
-        for row in df.itertuples(index=False):
-            file.write("/n".join(row))
-            file.write("\n")
-        print(file)
 
     return '--aps file created successfully-- '
 
