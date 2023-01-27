@@ -1,16 +1,17 @@
 import os
 import smtplib
 from datetime import datetime
-
-import pandas as pd
-from flask import Flask, render_template, request
+import warnings
+from flask import Flask, render_template, request, session
 
 import models
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'aps_lockbase/static/archive/'
-app.config['APS_FOLDER'] = 'aps_lockbase/static/archive'
+app.config['APS_FOLDER'] = 'aps_lockbase/static/aps/'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'csv'}
+app.secret_key = 'RHARHTEHDFWQR$#&^*$#%FSDFH'
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 @app.route('/', methods=['GET'])
@@ -39,25 +40,32 @@ def upload_files():
                            fields=order_types)
 
 
-@app.route('/create_aps_file', methods=['POST'])
-def aps_file_maker():
+@app.route('/auto_manual_splitter', methods=['POST'])
+def auto_manual_splitter():
     # Get lock types to be made on APS
     selected_fields = []
     for field in request.form:
         selected_fields.append(field)
+    session['selected_fields'] = selected_fields
 
-    # Get order from pickle database
-    order_with_pins = pd.read_pickle('order_with_pins.pkl')
-    automatic = order_with_pins[order_with_pins['Type'].isin(selected_fields)].append(order_with_pins.loc['System'])
-    manual = order_with_pins[~order_with_pins['Type'].isin(selected_fields)].append(order_with_pins.loc['System'])
+    automatic, manual = models.split_order(selected_fields)
+
+    return render_template('aps_conversion.html', automatic_data=automatic, manual_data=manual)
+
+
+@app.route('/create_aps_file', methods=['GET'])
+def create_aps_file():
+    # Get lock types to be made on APS
+    selected_fields = session.get('selected_fields')
+    automatic, manual = models.split_order(selected_fields)
 
     aps_file = models.create_aps_file(automatic, app.config['APS_FOLDER'])
-    aps_pdf = models.create_aps_pdf(automatic)
-    non_aps_pdf = models.creat_non_aps_pdf(manual)
+    aps_pdf = models.create_aps_pdf(automatic, app.config['UPLOAD_FOLDER'])
+    non_aps_pdf = models.creat_non_aps_pdf(manual, app.config['UPLOAD_FOLDER'])
 
     print(aps_pdf, aps_file, non_aps_pdf)
 
-    return render_template('aps_conversion.html', automatic_data=automatic, manual_data=manual)
+    return render_template('conversion_done.html')
 
 
 @app.route('/archive', methods=['GET'])

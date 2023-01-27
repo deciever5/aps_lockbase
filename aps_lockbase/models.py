@@ -1,15 +1,16 @@
+from datetime import datetime
+
 import pandas as pd
 from pdfminer.converter import PDFPageAggregator
 from pdfminer.layout import LAParams, LTTextBox, LTTextLine
 from pdfminer.pdfdocument import PDFTextExtractionNotAllowed
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
-from werkzeug.utils import secure_filename
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib.units import inch
-from datetime import datetime
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from werkzeug.utils import secure_filename
 
 
 def allowed_file(app, filename):
@@ -158,19 +159,31 @@ def get_order_types(df):
     return order_types
 
 
-def create_aps_file(df, file_path):
+def split_order(selected_fields):
+    # Get order from pickle database
+    order_with_pins = pd.read_pickle('order_with_pins.pkl')
+    automatic = order_with_pins[order_with_pins['Type'].isin(selected_fields)].append(order_with_pins.loc['System'])
+    manual = order_with_pins[~order_with_pins['Type'].isin(selected_fields)].append(order_with_pins.loc['System'])
+    return automatic, manual
+
+
+def create_aps_file(df, folder_path):
     table_name = df.loc['System', 'Number']
     today = datetime.today().date()
+    file_name = f'{table_name} {today}.txt'
+    folder_path = folder_path + file_name
+    with open(folder_path, 'w') as f:
+        print(f"APS file saved to {folder_path}")
+        df.drop('System').to_csv(f, index=False)
 
-    return '--aps file created successfully-- '
+        return '--aps file created successfully-- '
 
 
-def create_aps_pdf(automatic):
+def create_aps_pdf(automatic, folder_path):
     df = automatic
 
     pdf_file = 'data.pdf'
     doc = SimpleDocTemplate(pdf_file, pagesize=letter)
-
     data = [df.columns] + df.values.tolist()
 
     table = Table(data, colWidths=[1.5 * inch] * 5)
@@ -189,5 +202,6 @@ def create_aps_pdf(automatic):
     return '--aps pdf file created successfully-- '
 
 
-def creat_non_aps_pdf(manual):
+def creat_non_aps_pdf(manual, folder_path):
+    # print(manual.drop('System'))
     return ' --non aps pdf file created successfully-- '

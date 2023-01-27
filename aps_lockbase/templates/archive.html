@@ -20,7 +20,8 @@
                     <td>{{ file.name }}</td>
                     <td>{{ file.size }} bytes</td>
                     <td>{{ file.date }} </td>
-                    <td><a href="{{ url_for('archive', filename=file.name) }}" class="btn btn-primary">Download</a></td>
+                    <td><a href="{{ url_for('archive', filename=file.name) }}" class="btn btn-primary" download="{{ file.name }}">Download</a></td>
+
                 </tr>
                 {% endfor %}
             </tbody>

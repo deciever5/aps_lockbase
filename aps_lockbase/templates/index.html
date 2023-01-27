@@ -29,30 +29,29 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item">
+            <li class="nav-item {% if request.path == url_for('index') %}active{% endif %}">
                 <a class="nav-link" href="{{ url_for('index') }}">Konwerter </a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item {% if request.path == url_for('archive') %}active{% endif %}">
                 <a class="nav-link"  href="{{ url_for('archive') }}">Archiwum zleceń</a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item {% if request.path == url_for('contact') %}active{% endif %}">
                 <a class="nav-link" href="{{ url_for('contact') }}">Kontakt</a>
             </li>
         </ul>
     </div>
 </nav>
 
+
 <br>
 
-<div class="container col-10 mt-5">
+<div class="container col-10 mt-5 ">
     {% block upload %} {%endblock %}
 </div>
 
 <div class="container col-10 mt-5">
     {% block content %} {%endblock %}
 </div>
-
-<canvas id="canvas"></canvas>
 
 <br><br><br><br>
 <footer class="bg-primary text-white py-4 fixed-bottom">
