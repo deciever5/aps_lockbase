@@ -28,10 +28,7 @@
 <div class="mt-5 row justify-content-center mx-auto  ">
     <h2 class=" text-center ">Zamówienie:</h2>
     <pre class=" table-responsive ">
-              <table class="table  ">
                   {{ order_data.drop('System').to_html(index=True, classes='table-striped table-bordered table-condensed', header=True)|safe }}
-               </table>
-
           </pre>
 </div>
 

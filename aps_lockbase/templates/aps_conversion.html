@@ -18,19 +18,14 @@
         <div class="mt-5 justify-content-center mx-auto col-6  ">
             <h2 class=" text-center ">Do wykonania na APS:</h2>
             <pre class=" table-responsive ">
-                      <table class="table" >
-                        {{ automatic_data[['Number', 'Finish', 'Lenght','Profile','Quantity', 'Type', 'Special_eq']].drop('System').to_html(index=True,classes='table-striped table-bordered', header=True)|safe }}
-                    </table>
+                        {{ automatic_data[['Number', 'Finish', 'Length','Profile','Quantity', 'Type', 'Special_eq']].drop('System').to_html(index=True,classes='table-striped table-bordered', header=True)|safe }}
                   </pre>
         </div>
 
         <div class="mt-5  justify-content-center mx-auto col-6 ">
             <h2 class=" text-center ">Do wykonania manualnie:</h2>
             <pre class=" table-responsive ">
-                      <table class="table"  >
-                            {{ manual_data[['Number', 'Finish', 'Lenght','Profile','Quantity', 'Type', 'Special_eq']].drop('System').to_html(index=True, classes='table-striped table-bordered', header=True)|safe }}
-                       </table>
-
+                            {{ manual_data[['Number', 'Finish', 'Length','Profile','Quantity', 'Type', 'Special_eq']].drop('System').to_html(index=True, classes='table-striped table-bordered', header=True)|safe }}
                   </pre>
         </div>
     </div>
