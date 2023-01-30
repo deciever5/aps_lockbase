@@ -7,8 +7,9 @@ from flask import Flask, render_template, request, session
 import models
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'aps_lockbase/static/archive/'
-app.config['APS_FOLDER'] = 'aps_lockbase/static/aps/'
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static\\archive\\')
+app.config['APS_FOLDER'] = os.path.join(basedir, 'static\\aps\\')
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'csv'}
 app.secret_key = 'RHARHTEHDFWQR$#&^*$#%FSDFH'
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -61,7 +62,7 @@ def create_aps_file():
 
     aps_file = models.create_aps_file(automatic, app.config['APS_FOLDER'])
     aps_pdf = models.create_aps_pdf(automatic, app.config['UPLOAD_FOLDER'])
-    non_aps_pdf = models.creat_non_aps_pdf(manual, app.config['UPLOAD_FOLDER'])
+    non_aps_pdf = models.create_non_aps_pdf(manual, app.config['UPLOAD_FOLDER'])
 
     print(aps_pdf, aps_file, non_aps_pdf)
 

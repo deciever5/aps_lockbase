@@ -19,9 +19,9 @@ def allowed_file(app, filename):
 
 def create_df_from_csv(app, csv_filename):
     df = pd.read_csv(app.config['UPLOAD_FOLDER'] + csv_filename, delimiter=';', encoding='ANSI')
-    # Chosing and naming colums needed for an order
+    # Choosing and naming columns needed for an order
     df = df.iloc[:, [2, 3, 7, 11, 12, 13, 14, 15, 17, 18]]
-    df.columns = ['Room', 'Finish', 'Lenght', 'All_pins', 'Date', 'Profile', 'Sys_quantity', 'Special_eq', 'Number',
+    df.columns = ['Room', 'Finish', 'Length', 'All_pins', 'Date', 'Profile', 'Sys_quantity', 'Special_eq', 'Number',
                   'Type']
     # Removing all columns not containing system combinations
     df = df.dropna(subset=['Number']).reset_index(drop=True)
@@ -37,7 +37,7 @@ def create_df_from_csv(app, csv_filename):
 
     df['Extension_pins_sums'] = df['All_pins'].str.split('|').str[1:]
 
-    # Fill all empty fields with 0 up to the lenght of body_pins
+    # Fill all empty fields with 0 up to the length of body_pins
     length = df['Body_pins'].str.len().max()
     df['Extension_pins_sums'] = df['Extension_pins_sums'].apply(
         lambda x: ["0".join(string.replace(" ", "0").split()).ljust(length, "0") for string in x])
@@ -55,23 +55,23 @@ def create_df_from_csv(app, csv_filename):
                                     axis=1)
 
     df = df.reindex(
-        columns=['Number', 'Finish', 'Lenght', 'Profile', 'Sys_quantity', 'Type', 'Special_eq', 'Body_pins',
+        columns=['Number', 'Finish', 'Length', 'Profile', 'Sys_quantity', 'Type', 'Special_eq', 'Body_pins',
                  'Side_pins',
                  'Extension_pins', 'Date'])
     # in case of duplicates drop older row
     df.sort_values(by='Date', ascending=False, inplace=True)
-    df.drop_duplicates(subset=['Number', 'Finish', 'Lenght', 'Profile', 'Type', 'Special_eq'], keep='first',
+    df.drop_duplicates(subset=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq'], keep='first',
                        inplace=True)
     df.sort_values(by='Number', ascending=True, inplace=True)
 
-    # replace NaN values with empty string and change all types to object for comparision with order df
+    # replace NaN values with empty string and change all types to object for comparison with order df
     df.fillna(value='', inplace=True)
     df = df.astype(object)
     return df
 
 
 def ext_pins_recounting(body_pins, extension_pins_sums):
-    # Substracts previous number of pins from next element in extension_pins_sums(substract body pins for first element)
+    # Subtracts previous number of pins from next element in extension_pins_sums(subtract body pins for first element)
     extension_pins = [[int(x.replace('a', '10').replace('b', '11')) - int(y.replace('a', '10').replace('b', '11'))
                        if x != "0" else "0" for x, y in zip(extension_pins_sums[0], body_pins)]
                       for _ in extension_pins_sums]
@@ -79,7 +79,7 @@ def ext_pins_recounting(body_pins, extension_pins_sums):
 
 
 def files_save(app, pdf_file, csv_file):
-    # Extract and store in archive system pdf and odrer csv
+    # Extract and store in archive system pdf and order csv
     if pdf_file and allowed_file(app, pdf_file.filename) and csv_file and allowed_file(app, csv_file.filename):
         pdf_filename = secure_filename(pdf_file.filename)
         csv_filename = secure_filename(csv_file.filename)
@@ -119,12 +119,12 @@ def pdf_to_dataframe(app, pdf_filename):
             system_name = part[8:].strip()
 
     # Filter first column by system name, drop other columns
-    # Droping all lines too short (usually grid lines of system) and those containing LOCKBASE
+    # Dropping all lines too short (usually grid lines of system) and those containing LOCKBASE
     df = df[df['text'].str.contains(system_name)].iloc[:, 0:1].reset_index(drop=True)
     df = df[~df['text'].str.contains('LOCKBASE')]
     df = df[df['text'].map(len) >= 20]
 
-    # Split the string into list and furhter into columns
+    # Split the string into list and further into columns
     def split_string(string):
         return string.split("\n")
 
@@ -134,10 +134,10 @@ def pdf_to_dataframe(app, pdf_filename):
     df.drop('text', axis=1, inplace=True)
     df.columns = df.columns.astype(str)
     df = df.rename(
-        columns={'0': 'Number', '3': 'Finish', '2': 'Lenght', '4': 'Profile', '5': 'Quantity', '1': 'Type',
+        columns={'0': 'Number', '3': 'Finish', '2': 'Length', '4': 'Profile', '5': 'Quantity', '1': 'Type',
                  '6': 'Special_eq', '7': 'Others'})
     df = df.reindex(
-        columns=['Number', 'Finish', 'Lenght', 'Profile', 'Quantity', 'Type', 'Special_eq', 'Others'])
+        columns=['Number', 'Finish', 'Length', 'Profile', 'Quantity', 'Type', 'Special_eq', 'Others'])
 
     df = df.astype(object)
     df.loc['System'] = system_name
@@ -146,7 +146,7 @@ def pdf_to_dataframe(app, pdf_filename):
 
 def add_order_pinning(order_df, system_df):
     # Adds pinns to order from pdf by merging with system dataframe
-    merged_df = pd.merge(order_df, system_df, on=['Number', 'Finish', 'Lenght', 'Profile', 'Type', 'Special_eq'])
+    merged_df = pd.merge(order_df, system_df, on=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq'])
     merged_df.drop(columns=['Others', 'Date', 'Sys_quantity'], inplace=True)
     merged_df.index += 1
     merged_df.loc['System'] = order_df.loc['System']
@@ -172,6 +172,7 @@ def create_aps_file(df, folder_path):
     today = datetime.today().date()
     file_name = f'{table_name} {today}.txt'
     folder_path = folder_path + file_name
+
     with open(folder_path, 'w') as f:
         print(f"APS file saved to {folder_path}")
         df.drop('System').to_csv(f, index=False)
@@ -202,6 +203,6 @@ def create_aps_pdf(automatic, folder_path):
     return '--aps pdf file created successfully-- '
 
 
-def creat_non_aps_pdf(manual, folder_path):
-    # print(manual.drop('System'))
+def create_non_aps_pdf(manual, folder_path):
+    print(manual.drop('System'))
     return ' --non aps pdf file created successfully-- '
