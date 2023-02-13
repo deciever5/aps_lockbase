@@ -3,7 +3,7 @@ import smtplib
 from datetime import datetime
 import warnings
 from flask import Flask, render_template, request, session
-
+from dto import dto
 import models
 
 app = Flask(__name__)
@@ -32,13 +32,13 @@ def upload_files():
     order_df = models.pdf_to_dataframe(app, pdf_filename)
     system_df = models.create_df_from_csv(app, csv_filename)
     order_with_pinning = models.add_order_pinning(order_df, system_df)
-    order_with_pinning.to_pickle('order_with_pins.pkl')
-
+    # saving df for external functions use
+    dto.data_frame = order_with_pinning
     order_types = models.get_order_types(order_with_pinning.drop('System'))
 
     return render_template('aps_options.html', csv_filename=csv_filename, order_data=order_with_pinning,
                            pdf_filename=pdf_filename,
-                           fields=order_types)
+                           fields=order_types, system_data=system_df)
 
 
 @app.route('/auto_manual_splitter', methods=['POST'])

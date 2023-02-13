@@ -11,6 +11,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from werkzeug.utils import secure_filename
+from dto import dto
 
 
 def allowed_file(app, filename):
@@ -24,26 +25,26 @@ def create_df_from_csv(app, csv_filename):
     df.columns = ['Room', 'Finish', 'Length', 'All_pins', 'Date', 'Profile', 'Sys_quantity', 'Special_eq', 'Number',
                   'Type']
     # Removing all columns not containing system combinations
-    df = df.dropna(subset=['Number']).reset_index(drop=True)
+    df = df.dropna(subset=['Type']).reset_index(drop=True)
 
     # Creating new columns with individual pinning from All_pins column
     df['All_pins'] = df['All_pins'].str.replace('\r', '').str.replace('\n', '|')
-    df['Body_pins'] = df['All_pins'].str.split(' ').str[0]
+    df['Cylinder_pins'] = df['All_pins'].str.split(' ').str[0]
     # Additional operation needed for old system where side pins fields are empty
-    if (df['Body_pins'].str.contains('|')).any():
-        df['Body_pins'] = df['Body_pins'].str.split('|').str[0]
+    if (df['Cylinder_pins'].str.contains('|')).any():
+        df['Cylinder_pins'] = df['Cylinder_pins'].str.split('|').str[0]
 
     df['Side_pins'] = df['All_pins'].str.split('|').str[0].str.split(' ').str[1]
 
     df['Extension_pins_sums'] = df['All_pins'].str.split('|').str[1:]
 
-    # Fill all empty fields with 0 up to the length of body_pins
-    length = df['Body_pins'].str.len().max()
+    # Fill all empty fields with 0 up to the length of cylinder_pins
+    length = df['Cylinder_pins'].str.len().max()
     df['Extension_pins_sums'] = df['Extension_pins_sums'].apply(
         lambda x: ["0".join(string.replace(" ", "0").split()).ljust(length, "0") for string in x])
 
     # Change all pins fields into lists
-    df['Body_pins'] = df['Body_pins'].apply(lambda x: [i for i in x])
+    df['Cylinder_pins'] = df['Cylinder_pins'].apply(lambda x: [i for i in x])
     # Additional operation needed for old system where side pins fields are empty
     if (df['Side_pins']).any():
         df['Side_pins'] = df['Side_pins'].apply(lambda x: [i for i in x])
@@ -51,13 +52,14 @@ def create_df_from_csv(app, csv_filename):
     df['Extension_pins_sums'] = df['Extension_pins_sums'].apply(lambda x: [list(i) for i in x])
 
     # Counting proper number for extension pins, to match order style
-    df['Extension_pins'] = df.apply(lambda row: ext_pins_recounting(row['Body_pins'], row['Extension_pins_sums']),
+    df['Extension_pins'] = df.apply(lambda row: ext_pins_recounting(row['Cylinder_pins'], row['Extension_pins_sums']),
                                     axis=1)
+    df['Body_pins'] = body_pins_recounting(df['Extension_pins_sums'])
 
     df = df.reindex(
-        columns=['Number', 'Finish', 'Length', 'Profile', 'Sys_quantity', 'Type', 'Special_eq', 'Body_pins',
+        columns=['Number', 'Finish', 'Length', 'Profile', 'Sys_quantity', 'Type', 'Special_eq', 'Cylinder_pins',
                  'Side_pins',
-                 'Extension_pins', 'Date'])
+                 'Extension_pins', 'Body_pins', 'Date'])
     # in case of duplicates drop older row
     df.sort_values(by='Date', ascending=False, inplace=True)
     df.drop_duplicates(subset=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq'], keep='first',
@@ -70,12 +72,19 @@ def create_df_from_csv(app, csv_filename):
     return df
 
 
-def ext_pins_recounting(body_pins, extension_pins_sums):
+def ext_pins_recounting(cylinder_pins, extension_pins_sums):
     # Subtracts previous number of pins from next element in extension_pins_sums(subtract body pins for first element)
     extension_pins = [[int(x.replace('a', '10').replace('b', '11')) - int(y.replace('a', '10').replace('b', '11'))
-                       if x != "0" else "0" for x, y in zip(extension_pins_sums[0], body_pins)]
+                       if x != "0" else "0" for x, y in zip(extension_pins_sums[0], cylinder_pins)]
                       for _ in extension_pins_sums]
     return extension_pins
+
+
+def body_pins_recounting(extension_pins_sums):
+    total_pins = [value[-1] for value in extension_pins_sums]
+    body_pins = [[2 if int(x) <= 3 else 1 if 4 <= int(x) <= 6 else 0 for x in pins] for pins in total_pins]
+    #body_pins = [i for i in range(94)]
+    return body_pins
 
 
 def files_save(app, pdf_file, csv_file):
@@ -138,7 +147,6 @@ def pdf_to_dataframe(app, pdf_filename):
                  '6': 'Special_eq', '7': 'Others'})
     df = df.reindex(
         columns=['Number', 'Finish', 'Length', 'Profile', 'Quantity', 'Type', 'Special_eq', 'Others'])
-
     df = df.astype(object)
     df.loc['System'] = system_name
     return df
@@ -160,20 +168,29 @@ def get_order_types(df):
 
 
 def split_order(selected_fields):
-    # Get order from pickle database
-    order_with_pins = pd.read_pickle('order_with_pins.pkl')
+    # get pin data stored in dto
+    order_with_pins = dto.data_frame
     automatic = order_with_pins[order_with_pins['Type'].isin(selected_fields)].append(order_with_pins.loc['System'])
     manual = order_with_pins[~order_with_pins['Type'].isin(selected_fields)].append(order_with_pins.loc['System'])
     return automatic, manual
 
 
 def create_aps_file(df, folder_path):
+    # create filename and forlder path for coverterd  txt file
     table_name = df.loc['System', 'Number']
     today = datetime.today().date()
-    file_name = f'{table_name} {today}.txt'
+    file_name = f'{table_name}_{today}.txt'
     folder_path = folder_path + file_name
+    type_dict = {'PL': [], 'CL': [], 'DC EU': ['LC+XT', 'LO+XT', 'LC'], 'BC EU': ['LOG XT', 'LCG'],
+                 'HC EU': ['LCJ+XT', 'LOJ XT'], 'HC R': []}
+
+    side_pins_dict = {}
+    cylinder_pins_dict = {}
+    body_pins_dict = {''}
 
     with open(folder_path, 'w') as f:
+        contents = df.to_csv(index=False)
+        f.write(contents)
         print(f"APS file saved to {folder_path}")
         df.drop('System').to_csv(f, index=False)
 
@@ -204,5 +221,5 @@ def create_aps_pdf(automatic, folder_path):
 
 
 def create_non_aps_pdf(manual, folder_path):
-    print(manual.drop('System'))
+    # print(manual.drop('System'))
     return ' --non aps pdf file created successfully-- '

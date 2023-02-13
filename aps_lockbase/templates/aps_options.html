@@ -31,6 +31,11 @@
                   {{ order_data.drop('System').to_html(index=True, classes='table-striped table-bordered table-condensed', header=True)|safe }}
           </pre>
 </div>
-
+<div class="mt-5 row justify-content-center mx-auto  ">
+    <h2 class=" text-center ">System:</h2>
+    <pre class=" table-responsive ">
+                  {{ system_data.to_html(index=True, classes='table-striped table-bordered table-condensed', header=True)|safe }}
+          </pre>
+</div>
 
 {% endblock %}
