@@ -11,6 +11,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from werkzeug.utils import secure_filename
+from dto import dto
 
 
 def allowed_file(app, filename):
@@ -138,7 +139,6 @@ def pdf_to_dataframe(app, pdf_filename):
                  '6': 'Special_eq', '7': 'Others'})
     df = df.reindex(
         columns=['Number', 'Finish', 'Length', 'Profile', 'Quantity', 'Type', 'Special_eq', 'Others'])
-
     df = df.astype(object)
     df.loc['System'] = system_name
     return df
@@ -160,20 +160,25 @@ def get_order_types(df):
 
 
 def split_order(selected_fields):
+    # get pin data stored in dto
+    order_with_pins = dto.data_frame
     # Get order from pickle database
-    order_with_pins = pd.read_pickle('order_with_pins.pkl')
+    # order_with_pins = pd.read_pickle('order_with_pins.pkl')
     automatic = order_with_pins[order_with_pins['Type'].isin(selected_fields)].append(order_with_pins.loc['System'])
     manual = order_with_pins[~order_with_pins['Type'].isin(selected_fields)].append(order_with_pins.loc['System'])
     return automatic, manual
 
 
 def create_aps_file(df, folder_path):
+    # create filename and forlder path for coverterd  txt file
     table_name = df.loc['System', 'Number']
     today = datetime.today().date()
-    file_name = f'{table_name} {today}.txt'
+    file_name = f'{table_name}_{today}.txt'
     folder_path = folder_path + file_name
 
     with open(folder_path, 'w') as f:
+        contents = df.to_csv(index=False)
+        f.write(contents)
         print(f"APS file saved to {folder_path}")
         df.drop('System').to_csv(f, index=False)
 
