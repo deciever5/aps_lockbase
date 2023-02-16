@@ -81,9 +81,9 @@ def ext_pins_recounting(cylinder_pins, extension_pins_sums):
 
 
 def body_pins_recounting(extension_pins_sums):
-    total_pins = [value[-1] for value in extension_pins_sums]
-    body_pins = [[2 if int(x) <= 3 else 1 if 4 <= int(x) <= 6 else 0 for x in pins] for pins in total_pins]
-    #body_pins = [i for i in range(94)]
+    total_pins = [value[-1] for value in extension_pins_sums] # TODO: Needs total rework
+    body_pins = [[0 if not x.isdigit() else 2 if int(x) <= 3 else 1 if 4 <= int(x) <= 6 else 0 for x in pins] for pins in total_pins]
+    # body_pins = [i for i in range(94)]
     return body_pins
 
 
@@ -98,6 +98,9 @@ def files_save(app, pdf_file, csv_file):
     else:
         return False
 
+# Split the string into list and further into columns
+def split_string(string):
+    return string.split("\n")
 
 def pdf_to_dataframe(app, pdf_filename):
     # Extract the text from the order PDF file
@@ -119,23 +122,23 @@ def pdf_to_dataframe(app, pdf_filename):
             for element in layout:
                 if isinstance(element, LTTextBox) or isinstance(element, LTTextLine):
                     text_location.append((element.get_text(), element.bbox))
-    df = pd.DataFrame(text_location, columns=['text', 'location'])
+    df = pd.DataFrame(text_location, columns=['text', 'location']) # TODO: needs to join rows based on x location
     # Get name of the system which is in first row of first column after "System:"
     header = df.iloc[0, 0].split("\n")
+    print(df)
     system_name = ''
     for part in header:
         if "System:" in part:
             system_name = part[8:].strip()
-
+            if system_name.endswith('000'):
+                system_name = system_name[:-3]
     # Filter first column by system name, drop other columns
     # Dropping all lines too short (usually grid lines of system) and those containing LOCKBASE
     df = df[df['text'].str.contains(system_name)].iloc[:, 0:1].reset_index(drop=True)
     df = df[~df['text'].str.contains('LOCKBASE')]
     df = df[df['text'].map(len) >= 20]
 
-    # Split the string into list and further into columns
-    def split_string(string):
-        return string.split("\n")
+
 
     new_df = df['text'].apply(split_string)
     new_df = pd.DataFrame(new_df.tolist(), index=new_df.index)
@@ -184,9 +187,12 @@ def create_aps_file(df, folder_path):
     type_dict = {'PL': [], 'CL': [], 'DC EU': ['LC+XT', 'LO+XT', 'LC'], 'BC EU': ['LOG XT', 'LCG'],
                  'HC EU': ['LCJ+XT', 'LOJ XT'], 'HC R': []}
 
-    side_pins_dict = {}
-    cylinder_pins_dict = {}
-    body_pins_dict = {''}
+    cylinder_pins_dict = {'0': 'A_B00', '1': 'A_B01', '2': 'A_B02', '3': 'A_B03', '4': 'A_B04', '5': 'A_B05',
+                          '6': 'A_B06', '7': 'A_B07', '8': 'A_B08', '9': 'A_B09', '10': 'A_B0A', '11': 'A_B0B'}
+
+    ext_pins_dict = {'2':'A_U02', '3': 'A_U03', '4': 'A_U04', '5': 'A_U05', '6': 'A_U06', '7': 'A_U07', '8': 'A_U08', '9': 'A_U09'}
+
+    body_pins_dict = {'0': 'A_K00', '1': 'A_K01', '2': 'A_K02'}
 
     with open(folder_path, 'w') as f:
         contents = df.to_csv(index=False)
