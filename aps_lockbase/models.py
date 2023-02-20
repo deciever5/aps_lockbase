@@ -144,22 +144,9 @@ def pdf_to_dataframe(app, pdf_filename):
                 if isinstance(element, LTTextBox) or isinstance(element, LTTextLine):
                     text_location.append((element.get_text(), element.bbox))
     df = pd.DataFrame(text_location, columns=['text', 'location'])  # TODO: joins all rows with same name, needs reparis
+    df = join_incorect_rows(df)
 
-    prev_row = None
-    for i, row in df.iterrows():
-        if prev_row is not None and row['location'][0] == prev_row['location'][0]:
-            prev_row['text'] += '' + row['text']
-        else:
-            prev_row = row
-
-    # Get name of the system which is in first row of first column after "System:"
-    header = df.iloc[0, 0].split("\n")
-    system_name = ''
-    for part in header:
-        if "System:" in part:
-            system_name = part[8:].strip()
-            if system_name.endswith('000'):
-                system_name = system_name[:-3]
+    system_name = get_system_name(df)
     # Filter first column by system name, drop other columns
     # Dropping all lines too short (usually grid lines of system) and those containing LOCKBASE
     df = df[df['text'].str.contains(system_name)].iloc[:, 0:1].reset_index(drop=True)
@@ -170,13 +157,13 @@ def pdf_to_dataframe(app, pdf_filename):
     new_df = pd.DataFrame(new_df.tolist(), index=new_df.index)
     df = pd.concat([df, new_df], axis=1)
     df.drop('text', axis=1, inplace=True)
-    df.columns = df.columns.astype(str)
+    #df.columns = df.columns.astype(str)
 
-    #making all df 8 columns long
-    while df.shape[1]<8:
-        df['Others']= pd.Series(dtype='object')
+    # making all df 8 columns long
+    while df.shape[1] < 8:
+        df['Others'] = pd.Series(dtype='object')
 
-    # apply the function to each row of the DataFrame
+    #  shift rows where length is empty (padlocks)
     df = df.apply(shift_if_necessary, axis=1, result_type='expand')
     df.columns = ['Number', 'Type', 'Length', 'Finish', 'Profile', 'Quantity', 'Special_eq', 'Others']
     logger.info('DataFrame:\n%s', df.to_string(index=False))
@@ -185,12 +172,36 @@ def pdf_to_dataframe(app, pdf_filename):
 
     return df
 
+
+def join_incorect_rows(df):
+    prev_row = None
+    for i, row in df.iterrows():
+        if prev_row is not None and row['location'][0] == prev_row['location'][0]:
+            prev_row['text'] += '' + row['text']
+        else:
+            prev_row = row
+    return df
+
+
+def get_system_name(df):
+    # Get name of the system which is in first row of first column after "System:"
+    header = df.iloc[0, 0].split("\n")
+    system_name = ''
+    for part in header:
+        if "System:" in part:
+            system_name = part[8:].strip()
+            if system_name.endswith('000'):
+                system_name = system_name[:-3]
+    return system_name
+
+
 def shift_if_necessary(row):
     # shifts row to the right if length value is missing (padlocks)
     if not any(char.isdigit() for char in row[2]):
         return [row[0], row[1], '', row[2]] + list(row[3:7])
     else:
         return list(row[0:8])
+
 
 def add_order_pinning(order_df, system_df):
     # Adds pinns to order from pdf by merging with system dataframe
