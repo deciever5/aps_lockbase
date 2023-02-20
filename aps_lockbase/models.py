@@ -1,5 +1,5 @@
 from datetime import datetime
-
+import logging
 import pandas as pd
 from pdfminer.converter import PDFPageAggregator
 from pdfminer.layout import LAParams, LTTextBox, LTTextLine
@@ -12,6 +12,23 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from werkzeug.utils import secure_filename
 from dto import dto
+
+# Create logger object
+logger = logging.getLogger(__name__)
+
+# Set log level to INFO or desired level
+logger.setLevel(logging.INFO)
+
+# Create formatter object
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Create file handler object
+file_handler = logging.FileHandler('app.log')
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(formatter)
+
+# Add file handler to logger object
+logger.addHandler(file_handler)
 
 
 def allowed_file(app, filename):
@@ -81,8 +98,10 @@ def ext_pins_recounting(cylinder_pins, extension_pins_sums):
 
 
 def body_pins_recounting(extension_pins_sums):
-    total_pins = [value[-1] for value in extension_pins_sums] # TODO: Needs total rework
-    body_pins = [[0 if not x.isdigit() else 2 if int(x) <= 3 else 1 if 4 <= int(x) <= 6 else 0 for x in pins] for pins in total_pins]
+    total_pins = [value[-1] for value in extension_pins_sums]  # TODO: Needs total rework, not working for master pins
+
+    body_pins = [[0 if not x.isdigit() else 2 if int(x) <= 3 else 1 if 4 <= int(x) <= 6 else 0 for x in pins] for pins
+                 in total_pins]
     # body_pins = [i for i in range(94)]
     return body_pins
 
@@ -98,9 +117,11 @@ def files_save(app, pdf_file, csv_file):
     else:
         return False
 
+
 # Split the string into list and further into columns
 def split_string(string):
     return string.split("\n")
+
 
 def pdf_to_dataframe(app, pdf_filename):
     # Extract the text from the order PDF file
@@ -122,10 +143,17 @@ def pdf_to_dataframe(app, pdf_filename):
             for element in layout:
                 if isinstance(element, LTTextBox) or isinstance(element, LTTextLine):
                     text_location.append((element.get_text(), element.bbox))
-    df = pd.DataFrame(text_location, columns=['text', 'location']) # TODO: needs to join rows based on x location
+    df = pd.DataFrame(text_location, columns=['text', 'location'])  # TODO: joins all rows with same name, needs reparis
+
+    prev_row = None
+    for i, row in df.iterrows():
+        if prev_row is not None and row['location'][0] == prev_row['location'][0]:
+            prev_row['text'] += '' + row['text']
+        else:
+            prev_row = row
+
     # Get name of the system which is in first row of first column after "System:"
     header = df.iloc[0, 0].split("\n")
-    print(df)
     system_name = ''
     for part in header:
         if "System:" in part:
@@ -138,22 +166,31 @@ def pdf_to_dataframe(app, pdf_filename):
     df = df[~df['text'].str.contains('LOCKBASE')]
     df = df[df['text'].map(len) >= 20]
 
-
-
     new_df = df['text'].apply(split_string)
     new_df = pd.DataFrame(new_df.tolist(), index=new_df.index)
     df = pd.concat([df, new_df], axis=1)
     df.drop('text', axis=1, inplace=True)
     df.columns = df.columns.astype(str)
-    df = df.rename(
-        columns={'0': 'Number', '3': 'Finish', '2': 'Length', '4': 'Profile', '5': 'Quantity', '1': 'Type',
-                 '6': 'Special_eq', '7': 'Others'})
-    df = df.reindex(
-        columns=['Number', 'Finish', 'Length', 'Profile', 'Quantity', 'Type', 'Special_eq', 'Others'])
+
+    #making all df 8 columns long
+    while df.shape[1]<8:
+        df['Others']= pd.Series(dtype='object')
+
+    # apply the function to each row of the DataFrame
+    df = df.apply(shift_if_necessary, axis=1, result_type='expand')
+    df.columns = ['Number', 'Type', 'Length', 'Finish', 'Profile', 'Quantity', 'Special_eq', 'Others']
+    logger.info('DataFrame:\n%s', df.to_string(index=False))
     df = df.astype(object)
     df.loc['System'] = system_name
+
     return df
 
+def shift_if_necessary(row):
+    # shifts row to the right if length value is missing (padlocks)
+    if not any(char.isdigit() for char in row[2]):
+        return [row[0], row[1], '', row[2]] + list(row[3:7])
+    else:
+        return list(row[0:8])
 
 def add_order_pinning(order_df, system_df):
     # Adds pinns to order from pdf by merging with system dataframe
@@ -190,7 +227,8 @@ def create_aps_file(df, folder_path):
     cylinder_pins_dict = {'0': 'A_B00', '1': 'A_B01', '2': 'A_B02', '3': 'A_B03', '4': 'A_B04', '5': 'A_B05',
                           '6': 'A_B06', '7': 'A_B07', '8': 'A_B08', '9': 'A_B09', '10': 'A_B0A', '11': 'A_B0B'}
 
-    ext_pins_dict = {'2':'A_U02', '3': 'A_U03', '4': 'A_U04', '5': 'A_U05', '6': 'A_U06', '7': 'A_U07', '8': 'A_U08', '9': 'A_U09'}
+    ext_pins_dict = {'2': 'A_U02', '3': 'A_U03', '4': 'A_U04', '5': 'A_U05', '6': 'A_U06', '7': 'A_U07', '8': 'A_U08',
+                     '9': 'A_U09'}
 
     body_pins_dict = {'0': 'A_K00', '1': 'A_K01', '2': 'A_K02'}
 
