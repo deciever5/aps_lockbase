@@ -7,11 +7,12 @@ from dto import dto
 import models
 
 app = Flask(__name__)
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static\\archive\\')
 app.config['APS_FOLDER'] = os.path.join(basedir, 'static\\aps\\')
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'csv'}
-app.secret_key = 'RHARHTEHDFWQR$#&^*$#%FSDFH'
+app.secret_key = 'RHARHTEHDFWQR$#&^*$#%FDFH'
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 
@@ -26,13 +27,15 @@ def upload_files():
     csv_file = request.files.get('csv-file')
 
     # save files to archive and get their names
-    pdf_filename, csv_filename = models.files_save(app, pdf_file, csv_file)
+    pdf_filename, csv_filename = models.files_save(app.config['ALLOWED_EXTENSIONS'], app.config['UPLOAD_FOLDER'],
+                                                   pdf_file, csv_file)
 
     # create dataframes and tables for display from pdf and csv file
-    order_df = models.pdf_to_dataframe(app, pdf_filename)
-    system_df = models.create_df_from_csv(app, csv_filename)
+    order_df = models.pdf_to_dataframe(app.config['UPLOAD_FOLDER'], pdf_filename)
+    system_df = models.create_df_from_csv(app.config['UPLOAD_FOLDER'], csv_filename)
+    system_df = models.clean_and_refactor(system_df)
     order_with_pinning = models.add_order_pinning(order_df, system_df)
-    # saving df for external functions use
+    # saving dataframe for external functions use
     dto.data_frame = order_with_pinning
     order_types = models.get_order_types(order_with_pinning.drop('System'))
 
@@ -107,3 +110,5 @@ def contact():
 
 if __name__ == "__main__":
     app.run()
+
+

@@ -15,35 +15,34 @@ from dto import dto
 
 # Create logger object
 logger = logging.getLogger(__name__)
-
 # Set log level to INFO or desired level
 logger.setLevel(logging.INFO)
-
 # Create formatter object
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
 # Create file handler object
-file_handler = logging.FileHandler('app.log')
+file_handler = logging.FileHandler('app.log', mode='w')
 file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(formatter)
-
 # Add file handler to logger object
 logger.addHandler(file_handler)
 
 
-def allowed_file(app, filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+def allowed_file(extensions, filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in extensions
 
 
-def create_df_from_csv(app, csv_filename):
-    df = pd.read_csv(app.config['UPLOAD_FOLDER'] + csv_filename, delimiter=';', encoding='ANSI')
+def create_df_from_csv(folder, csv_filename):
+    df = pd.read_csv(folder + csv_filename, delimiter=';', encoding='ANSI')
     # Choosing and naming columns needed for an order
     df = df.iloc[:, [2, 3, 7, 11, 12, 13, 14, 15, 17, 18]]
     df.columns = ['Room', 'Finish', 'Length', 'All_pins', 'Date', 'Profile', 'Sys_quantity', 'Special_eq', 'Number',
                   'Type']
     # Removing all columns not containing system combinations
     df = df.dropna(subset=['Type']).reset_index(drop=True)
+    return df
 
+
+def clean_and_refactor(df):
     # Creating new columns with individual pinning from All_pins column
     df['All_pins'] = df['All_pins'].str.replace('\r', '').str.replace('\n', '|')
     df['Cylinder_pins'] = df['All_pins'].str.split(' ').str[0]
@@ -86,6 +85,9 @@ def create_df_from_csv(app, csv_filename):
     # replace NaN values with empty string and change all types to object for comparison with order df
     df.fillna(value='', inplace=True)
     df = df.astype(object)
+    # removing all spaces from types as same types are written in different ways
+    df['Type'] = df['Type'].apply(lambda x: x.replace(' ', ''))
+
     return df
 
 
@@ -106,13 +108,14 @@ def body_pins_recounting(extension_pins_sums):
     return body_pins
 
 
-def files_save(app, pdf_file, csv_file):
+def files_save(extensions, folder, pdf_file, csv_file):
     # Extract and store in archive system pdf and order csv
-    if pdf_file and allowed_file(app, pdf_file.filename) and csv_file and allowed_file(app, csv_file.filename):
+    if pdf_file and allowed_file(extensions, pdf_file.filename) and csv_file and allowed_file(extensions,
+                                                                                              csv_file.filename):
         pdf_filename = secure_filename(pdf_file.filename)
         csv_filename = secure_filename(csv_file.filename)
-        pdf_file.save(app.config['UPLOAD_FOLDER'] + pdf_filename)
-        csv_file.save(app.config['UPLOAD_FOLDER'] + csv_filename)
+        pdf_file.save(folder + pdf_filename)
+        csv_file.save(folder + csv_filename)
         return pdf_filename, csv_filename
     else:
         return False
@@ -123,9 +126,54 @@ def split_string(string):
     return string.split("\n")
 
 
-def pdf_to_dataframe(app, pdf_filename):
+def pdf_to_dataframe(folder, pdf_filename):
+    df = extract_text(folder, pdf_filename)
+    system_name = get_system_name(df)
+    df = join_incorect_rows(df, system_name)  # TODO: joins all rows with same name, needs repairs
+
+    # Filter first column by system name, drop other columns
+    # Dropping all lines too short (usually grid lines of system) and those containing LOCKBASE,
+
+    df = df[df['text'].str.contains(system_name)].iloc[:, 0:1].reset_index(drop=True)
+    df = df[~df['text'].str.contains('LOCKBASE')]
+    df = df[df['text'].map(len) >= 20]
+    logger.info('DataFrame:\n%s', df.to_string(index=False))
+
+    new_df = df['text'].apply(split_string)
+
+    new_df = pd.DataFrame(new_df.tolist(), index=new_df.index)
+    df = pd.concat([df, new_df], axis=1)
+    df.drop('text', axis=1, inplace=True)
+
+    # making all df 8 columns long
+    while df.shape[1] < 8:
+        df['Others'] = pd.Series(dtype='object')
+
+    #  shift rows where length is empty (padlocks)
+    df = df.apply(shift_if_length_missing, axis=1, result_type='expand')
+    df.columns = ['Number', 'Type', 'Length', 'Finish', 'Profile', 'Quantity', 'Special_eq', 'Others']
+    df['Type'] = df['Type'].apply(lambda x: x.replace(' ', ''))
+    df = df.astype(object)
+    df.loc['System'] = system_name
+
+    return df
+
+
+def join_incorect_rows(df, system_name):
+    prev_row = None
+    # logger.info('DataFrame:\n%s', df.to_string(index=False))
+    for i, row in df.iterrows():
+        if prev_row is not None and row['location'][0] == prev_row['location'][0] and system_name not in row['text']:
+            prev_row['text'] += '' + row['text']
+        else:
+            prev_row = row
+
+    return df
+
+
+def extract_text(folder, pdf_filename):
     # Extract the text from the order PDF file
-    pdf_path = app.config['UPLOAD_FOLDER'] + pdf_filename
+    pdf_path = folder + pdf_filename
     text_location = []
     # Extract text with its location coordinates and save them to a dataframe
     with open(pdf_path, 'rb') as pdf_file:
@@ -143,43 +191,7 @@ def pdf_to_dataframe(app, pdf_filename):
             for element in layout:
                 if isinstance(element, LTTextBox) or isinstance(element, LTTextLine):
                     text_location.append((element.get_text(), element.bbox))
-    df = pd.DataFrame(text_location, columns=['text', 'location'])  # TODO: joins all rows with same name, needs reparis
-    df = join_incorect_rows(df)
-
-    system_name = get_system_name(df)
-    # Filter first column by system name, drop other columns
-    # Dropping all lines too short (usually grid lines of system) and those containing LOCKBASE
-    df = df[df['text'].str.contains(system_name)].iloc[:, 0:1].reset_index(drop=True)
-    df = df[~df['text'].str.contains('LOCKBASE')]
-    df = df[df['text'].map(len) >= 20]
-
-    new_df = df['text'].apply(split_string)
-    new_df = pd.DataFrame(new_df.tolist(), index=new_df.index)
-    df = pd.concat([df, new_df], axis=1)
-    df.drop('text', axis=1, inplace=True)
-    #df.columns = df.columns.astype(str)
-
-    # making all df 8 columns long
-    while df.shape[1] < 8:
-        df['Others'] = pd.Series(dtype='object')
-
-    #  shift rows where length is empty (padlocks)
-    df = df.apply(shift_if_necessary, axis=1, result_type='expand')
-    df.columns = ['Number', 'Type', 'Length', 'Finish', 'Profile', 'Quantity', 'Special_eq', 'Others']
-    logger.info('DataFrame:\n%s', df.to_string(index=False))
-    df = df.astype(object)
-    df.loc['System'] = system_name
-
-    return df
-
-
-def join_incorect_rows(df):
-    prev_row = None
-    for i, row in df.iterrows():
-        if prev_row is not None and row['location'][0] == prev_row['location'][0]:
-            prev_row['text'] += '' + row['text']
-        else:
-            prev_row = row
+    df = pd.DataFrame(text_location, columns=['text', 'location'])
     return df
 
 
@@ -195,7 +207,7 @@ def get_system_name(df):
     return system_name
 
 
-def shift_if_necessary(row):
+def shift_if_length_missing(row):
     # shifts row to the right if length value is missing (padlocks)
     if not any(char.isdigit() for char in row[2]):
         return [row[0], row[1], '', row[2]] + list(row[3:7])
@@ -278,3 +290,4 @@ def create_aps_pdf(automatic, folder_path):
 def create_non_aps_pdf(manual, folder_path):
     # print(manual.drop('System'))
     return ' --non aps pdf file created successfully-- '
+# TODO: make system indexes  numbered after sorting
