@@ -12,6 +12,7 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from werkzeug.utils import secure_filename
 from dto import dto
+import re
 
 # Create logger object
 logger = logging.getLogger(__name__)
@@ -128,6 +129,7 @@ def split_string(string):
 
 def pdf_to_dataframe(folder, pdf_filename):
     df = extract_text(folder, pdf_filename)
+    logger.info('DataFrame:\n%s', df.to_string(index=False))
     system_name = get_system_name(df)
     df = join_incorect_rows(df, system_name)  # TODO: joins all rows with same name, needs repairs
 
@@ -135,13 +137,15 @@ def pdf_to_dataframe(folder, pdf_filename):
     # Dropping all lines too short (usually grid lines of system) and those containing LOCKBASE,
 
     df = df[df['text'].str.contains(system_name)].iloc[:, 0:1].reset_index(drop=True)
+
     df = df[~df['text'].str.contains('LOCKBASE')]
-    df = df[df['text'].map(len) >= 20]
-    logger.info('DataFrame:\n%s', df.to_string(index=False))
+
+    # df = df[df['text'].map(len) >= 20]
 
     new_df = df['text'].apply(split_string)
 
     new_df = pd.DataFrame(new_df.tolist(), index=new_df.index)
+
     df = pd.concat([df, new_df], axis=1)
     df.drop('text', axis=1, inplace=True)
 
@@ -151,17 +155,22 @@ def pdf_to_dataframe(folder, pdf_filename):
 
     #  shift rows where length is empty (padlocks)
     df = df.apply(shift_if_length_missing, axis=1, result_type='expand')
+
     df.columns = ['Number', 'Type', 'Length', 'Finish', 'Profile', 'Quantity', 'Special_eq', 'Others']
     df['Type'] = df['Type'].apply(lambda x: x.replace(' ', ''))
+    # df['Special_eq'] = df['Special_eq'].apply(lambda x: '' if  re.match(r'^[0-9\s]+$', x) else x)
+    df.sort_values(by='Number', ascending=True, inplace=True)
+    df.drop_duplicates(subset=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq'], keep='first',
+                       inplace=True)
+
     df = df.astype(object)
     df.loc['System'] = system_name
 
     return df
 
 
-def join_incorect_rows(df, system_name):
+def join_incorect_rows(df, system_name):#TODO remake to include x and y coordinates of text, for each row scan all rows till end of page in same row and loacation y-z<100
     prev_row = None
-    # logger.info('DataFrame:\n%s', df.to_string(index=False))
     for i, row in df.iterrows():
         if prev_row is not None and row['location'][0] == prev_row['location'][0] and system_name not in row['text']:
             prev_row['text'] += '' + row['text']
@@ -218,6 +227,7 @@ def shift_if_length_missing(row):
 def add_order_pinning(order_df, system_df):
     # Adds pinns to order from pdf by merging with system dataframe
     merged_df = pd.merge(order_df, system_df, on=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq'])
+
     merged_df.drop(columns=['Others', 'Date', 'Sys_quantity'], inplace=True)
     merged_df.index += 1
     merged_df.loc['System'] = order_df.loc['System']

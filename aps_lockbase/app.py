@@ -35,6 +35,7 @@ def upload_files():
     system_df = models.create_df_from_csv(app.config['UPLOAD_FOLDER'], csv_filename)
     system_df = models.clean_and_refactor(system_df)
     order_with_pinning = models.add_order_pinning(order_df, system_df)
+
     # saving dataframe for external functions use
     dto.data_frame = order_with_pinning
     order_types = models.get_order_types(order_with_pinning.drop('System'))
@@ -109,6 +110,4 @@ def contact():
 
 
 if __name__ == "__main__":
-    app.run()
-
-
+    app.run(deb)
