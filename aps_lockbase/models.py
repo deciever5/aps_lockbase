@@ -1,5 +1,6 @@
-from datetime import datetime
 import logging
+from datetime import datetime
+
 import pandas as pd
 from pdfminer.converter import PDFPageAggregator
 from pdfminer.layout import LAParams, LTTextBox, LTTextLine
@@ -11,8 +12,8 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from werkzeug.utils import secure_filename
+
 from dto import dto
-import re
 
 # Create logger object
 logger = logging.getLogger(__name__)
@@ -129,7 +130,7 @@ def split_string(string):
 
 def pdf_to_dataframe(folder, pdf_filename):
     df = extract_text(folder, pdf_filename)
-    logger.info('DataFrame:\n%s', df.to_string(index=False))
+
     system_name = get_system_name(df)
     df = join_incorect_rows(df, system_name)  # TODO: joins all rows with same name, needs repairs
 
@@ -138,7 +139,7 @@ def pdf_to_dataframe(folder, pdf_filename):
 
     df = df[df['text'].str.contains(system_name)].iloc[:, 0:1].reset_index(drop=True)
 
-    df = df[~df['text'].str.contains('LOCKBASE')]
+    # df = df[~df['text'].str.contains('LOCKBASE')]
 
     # df = df[df['text'].map(len) >= 20]
 
@@ -155,8 +156,9 @@ def pdf_to_dataframe(folder, pdf_filename):
 
     #  shift rows where length is empty (padlocks)
     df = df.apply(shift_if_length_missing, axis=1, result_type='expand')
+    df = df.apply(shift_if_special_missing, axis=1, result_type='expand')
 
-    df.columns = ['Number', 'Type', 'Length', 'Finish', 'Profile', 'Quantity', 'Special_eq', 'Others']
+    df.columns = ['Number', 'Type', 'Length', 'Finish', 'Profile', 'Quantity', 'Special_eq', 'Others'] # TODO: to check , missing rows after this before return
     df['Type'] = df['Type'].apply(lambda x: x.replace(' ', ''))
     # df['Special_eq'] = df['Special_eq'].apply(lambda x: '' if  re.match(r'^[0-9\s]+$', x) else x)
     df.sort_values(by='Number', ascending=True, inplace=True)
@@ -169,15 +171,30 @@ def pdf_to_dataframe(folder, pdf_filename):
     return df
 
 
-def join_incorect_rows(df, system_name):#TODO remake to include x and y coordinates of text, for each row scan all rows till end of page in same row and loacation y-z<100
-    prev_row = None
-    for i, row in df.iterrows():
-        if prev_row is not None and row['location'][0] == prev_row['location'][0] and system_name not in row['text']:
-            prev_row['text'] += '' + row['text']
-        else:
-            prev_row = row
+def join_incorect_rows(df, system_name):
+    # Get the rows with the system name and lockbase(to mark end of page)
+    system_rows = df[(df['text'].str.contains(system_name)) & (~df['text'].str.contains('LOCKBASE'))]
+    lockbase_rows = df[df['text'].str.contains('LOCKBASE')]
+    new_df = pd.DataFrame()
+    # Loop over the rows with the system name
+    for _, system_row in system_rows.iterrows():
+        # Find the rows from the system row up to the LOCKBASE row
+        if lockbase_rows.index.max() == 0:  # for one page orders
+            relevant_rows = df.loc[system_row.name:]
+        else:  # for multiple pages, relevant rows are only until end of a page ('lackbase')
+            next_index = lockbase_rows.loc[lockbase_rows.index > system_row.name].index[0] - 1
+            relevant_rows = df.loc[system_row.name:next_index]
+        # Find the rows with matching location and within the 160 position difference which means they are in the same box
 
-    return df
+        matching_rows = relevant_rows[(abs(relevant_rows['location'].str[0] - system_row['location'][0]) < 1)
+                                      & ((system_row['location'][1] - relevant_rows['location'].str[1]) < 160) & (
+                                              0 <= (system_row['location'][1] - relevant_rows['location'].str[1]))]
+        first_row = matching_rows.iloc[0]
+        for i, row in matching_rows.iloc[1:].iterrows():
+            first_row['text'] += '' + row['text']
+        new_df = new_df.append(first_row, ignore_index=True)
+    # Return the updated dataframe
+    return new_df
 
 
 def extract_text(folder, pdf_filename):
@@ -221,6 +238,14 @@ def shift_if_length_missing(row):
     if not any(char.isdigit() for char in row[2]):
         return [row[0], row[1], '', row[2]] + list(row[3:7])
     else:
+        return list(row[0:8])
+
+def shift_if_special_missing(row):
+    if all(char.isdigit() for char in row[6].replace(' ', '')):
+        print (list(row[0:6]) + ['', row[6]])
+        return list(row[0:6]) + ['', row[6]]
+    else:
+        print(list(row[0:8]))
         return list(row[0:8])
 
 
