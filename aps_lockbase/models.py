@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import datetime
 
 import pandas as pd
@@ -75,15 +76,14 @@ def clean_and_refactor(df):
     df['Body_pins'] = body_pins_recounting(df['Extension_pins_sums'])
 
     df = df.reindex(
-        columns=['Number', 'Finish', 'Length', 'Profile', 'Sys_quantity', 'Type', 'Special_eq', 'Cylinder_pins',
+        columns=['Number', 'Type', 'Length', 'Finish', 'Profile', 'Special_eq', 'Sys_quantity', 'Cylinder_pins',
                  'Side_pins',
                  'Extension_pins', 'Body_pins', 'Date'])
     # in case of duplicates drop older row
     df.sort_values(by='Date', ascending=False, inplace=True)
-    df.drop_duplicates(subset=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq'], keep='first',
-                       inplace=True)
+    #df = df.drop_duplicates(subset=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq'], keep='first')
     df.sort_values(by='Number', ascending=True, inplace=True)
-
+    df = df.reset_index(drop=True)
     # replace NaN values with empty string and change all types to object for comparison with order df
     df.fillna(value='', inplace=True)
     df = df.astype(object)
@@ -136,15 +136,9 @@ def pdf_to_dataframe(folder, pdf_filename):
 
     # Filter first column by system name, drop other columns
     # Dropping all lines too short (usually grid lines of system) and those containing LOCKBASE,
-
     df = df[df['text'].str.contains(system_name)].iloc[:, 0:1].reset_index(drop=True)
 
-    # df = df[~df['text'].str.contains('LOCKBASE')]
-
-    # df = df[df['text'].map(len) >= 20]
-
     new_df = df['text'].apply(split_string)
-
     new_df = pd.DataFrame(new_df.tolist(), index=new_df.index)
 
     df = pd.concat([df, new_df], axis=1)
@@ -154,20 +148,21 @@ def pdf_to_dataframe(folder, pdf_filename):
     while df.shape[1] < 8:
         df['Others'] = pd.Series(dtype='object')
 
-    #  shift rows where length is empty (padlocks)
+    #  shift rows where length,finish or sepcial_eq is empty (padlocks,camlocks)
     df = df.apply(shift_if_length_missing, axis=1, result_type='expand')
     df = df.apply(shift_if_special_missing, axis=1, result_type='expand')
+    df = df.apply(shift_if_finish_missing, axis=1, result_type='expand')
 
-    df.columns = ['Number', 'Type', 'Length', 'Finish', 'Profile', 'Quantity', 'Special_eq', 'Others'] # TODO: to check , missing rows after this before return
+    df.columns = ['Number', 'Type', 'Length', 'Finish', 'Profile', 'Quantity', 'Special_eq',
+                  'Others']
     df['Type'] = df['Type'].apply(lambda x: x.replace(' ', ''))
-    # df['Special_eq'] = df['Special_eq'].apply(lambda x: '' if  re.match(r'^[0-9\s]+$', x) else x)
-    df.sort_values(by='Number', ascending=True, inplace=True)
-    df.drop_duplicates(subset=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq'], keep='first',
-                       inplace=True)
+    df = df.sort_values(by='Number', ascending=True)
+    df = df.reset_index(drop=True)
+    # duplicates = df[df.duplicated(subset=['Number', 'Finish', 'Length', 'Type', 'Profile', 'Special_eq'], keep=False)]
 
     df = df.astype(object)
     df.loc['System'] = system_name
-
+    logger.info('Order dataframe:\n%s', df.to_string(index=False))
     return df
 
 
@@ -184,7 +179,7 @@ def join_incorect_rows(df, system_name):
         else:  # for multiple pages, relevant rows are only until end of a page ('lackbase')
             next_index = lockbase_rows.loc[lockbase_rows.index > system_row.name].index[0] - 1
             relevant_rows = df.loc[system_row.name:next_index]
-        # Find the rows with matching location and within the 160 position difference which means they are in the same box
+        # Find rows with matching location and within the 160 position difference which means they are in the same box
 
         matching_rows = relevant_rows[(abs(relevant_rows['location'].str[0] - system_row['location'][0]) < 1)
                                       & ((system_row['location'][1] - relevant_rows['location'].str[1]) < 160) & (
@@ -235,24 +230,33 @@ def get_system_name(df):
 
 def shift_if_length_missing(row):
     # shifts row to the right if length value is missing (padlocks)
-    if not any(char.isdigit() for char in row[2]):
-        return [row[0], row[1], '', row[2]] + list(row[3:7])
+    pattern = r'^[-G\d\s]+$'
+    if not bool(re.match(pattern, row[2])):
+        return [row[0], row[1], ''] + list(row[2:7])
     else:
         return list(row[0:8])
 
+
 def shift_if_special_missing(row):
-    if all(char.isdigit() for char in row[6].replace(' ', '')):
-        print (list(row[0:6]) + ['', row[6]])
+    # shifts row to the right if special_eq value is missing (padlocks)
+    pattern = r'^[ab\d\s]+$'
+    if bool(re.match(pattern, row[6])):
         return list(row[0:6]) + ['', row[6]]
     else:
-        print(list(row[0:8]))
+        return list(row[0:8])
+
+
+def shift_if_finish_missing(row):
+    # shifts row to the right if finish value is missing (padlocks)
+    if row[4].isdigit() and not row[5].isdigit():
+        return list(row[0:3]) + [''] + list(row[3:7])
+    else:
         return list(row[0:8])
 
 
 def add_order_pinning(order_df, system_df):
     # Adds pinns to order from pdf by merging with system dataframe
-    merged_df = pd.merge(order_df, system_df, on=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq'])
-
+    merged_df = pd.merge(order_df, system_df, on=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq']) #TODO: merge niepoprawny, sprawdzać quantity?
     merged_df.drop(columns=['Others', 'Date', 'Sys_quantity'], inplace=True)
     merged_df.index += 1
     merged_df.loc['System'] = order_df.loc['System']
