@@ -34,7 +34,7 @@ def upload_files():
     order_df = models.pdf_to_dataframe(app.config['UPLOAD_FOLDER'], pdf_filename)
     system_df = models.create_df_from_csv(app.config['UPLOAD_FOLDER'], csv_filename)
     system_df = models.clean_and_refactor(system_df)
-
+    system_df.index += 1
     order_with_pinning = models.add_order_pinning(order_df, system_df)
 
     # saving dataframe for external functions use

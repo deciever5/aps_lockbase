@@ -38,7 +38,7 @@ def create_df_from_csv(folder, csv_filename):
     df = pd.read_csv(folder + csv_filename, delimiter=';', encoding='ANSI')
     # Choosing and naming columns needed for an order
     df = df.iloc[:, [2, 3, 7, 11, 12, 13, 14, 15, 17, 18]]
-    df.columns = ['Room', 'Finish', 'Length', 'All_pins', 'Date', 'Profile', 'Sys_quantity', 'Special_eq', 'Number',
+    df.columns = ['Room', 'Finish', 'Length', 'All_pins', 'Date', 'Profile', 'Quantity', 'Special_eq', 'Number',
                   'Type']
     # Removing all columns not containing system combinations
     df = df.dropna(subset=['Type']).reset_index(drop=True)
@@ -59,8 +59,9 @@ def clean_and_refactor(df):
 
     # Fill all empty fields with 0 up to the length of cylinder_pins
     length = df['Cylinder_pins'].str.len().max()
-    df['Extension_pins_sums'] = df['Extension_pins_sums'].apply(
-        lambda x: ["0".join(string.replace(" ", "0").split()).ljust(length, "0") for string in x])
+    # Loop through each list of strings in the DataFrame column
+
+    df = fill_missing_pins(df, length)
 
     # Change all pins fields into lists
     df['Cylinder_pins'] = df['Cylinder_pins'].apply(lambda x: [i for i in x])
@@ -69,24 +70,33 @@ def clean_and_refactor(df):
         df['Side_pins'] = df['Side_pins'].apply(lambda x: [i for i in x])
 
     df['Extension_pins_sums'] = df['Extension_pins_sums'].apply(lambda x: [list(i) for i in x])
+    df['Extension_pins_sums'] = df.apply(
+        lambda x: [x['Cylinder_pins']] if len(x['Extension_pins_sums']) == 0 else x['Extension_pins_sums'], axis=1)
 
     # Counting proper number for extension pins, to match order style
     df['Extension_pins'] = df.apply(lambda row: ext_pins_recounting(row['Cylinder_pins'], row['Extension_pins_sums']),
                                     axis=1)
+
+
+
     df['Body_pins'] = body_pins_recounting(df['Extension_pins_sums'])
 
     df = df.reindex(
-        columns=['Number', 'Type', 'Length', 'Finish', 'Profile', 'Special_eq', 'Sys_quantity', 'Cylinder_pins',
+        columns=['Number', 'Type', 'Length', 'Finish', 'Profile', 'Special_eq', 'Quantity', 'Cylinder_pins',
                  'Side_pins',
                  'Extension_pins', 'Body_pins', 'Date'])
     # in case of duplicates drop older row
     df.sort_values(by='Date', ascending=False, inplace=True)
-    #df = df.drop_duplicates(subset=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq'], keep='first')
+    # df = df.drop_duplicates(subset=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq'], keep='first')
     df.sort_values(by='Number', ascending=True, inplace=True)
     df = df.reset_index(drop=True)
     # replace NaN values with empty string and change all types to object for comparison with order df
+    try:
+        df['Quantity'] = df['Quantity'].astype(int)
+    except pd.errors.IntCastingNaNError:
+        df['Quantity'] = df['Quantity'].fillna(0).astype(int)
     df.fillna(value='', inplace=True)
-    df = df.astype(object)
+
     # removing all spaces from types as same types are written in different ways
     df['Type'] = df['Type'].apply(lambda x: x.replace(' ', ''))
 
@@ -96,17 +106,21 @@ def clean_and_refactor(df):
 def ext_pins_recounting(cylinder_pins, extension_pins_sums):
     # Subtracts previous number of pins from next element in extension_pins_sums(subtract body pins for first element)
     extension_pins = [[int(x.replace('a', '10').replace('b', '11')) - int(y.replace('a', '10').replace('b', '11'))
-                       if x != "0" else "0" for x, y in zip(extension_pins_sums[0], cylinder_pins)]
-                      for _ in extension_pins_sums]
+                       if x != "0" else 0 for x, y in zip(extension_pins_sums[0], cylinder_pins)]]
+    for i in range(1,len(extension_pins_sums)):
+        extension_pins_2 = [int(x.replace('a', '10').replace('b', '11')) - int(y.replace('a', '10').replace('b', '11'))
+                           if x != "0" else 0 for x, y in zip(extension_pins_sums[i], extension_pins_sums[i-1])]
+        extension_pins.append(extension_pins_2)
+
     return extension_pins
 
 
 def body_pins_recounting(extension_pins_sums):
-    total_pins = [value[-1] for value in extension_pins_sums]  # TODO: Needs total rework, not working for master pins
+    total_pins = [value[-1]if value else '' for value in extension_pins_sums]
 
     body_pins = [[0 if not x.isdigit() else 2 if int(x) <= 3 else 1 if 4 <= int(x) <= 6 else 0 for x in pins] for pins
                  in total_pins]
-    # body_pins = [i for i in range(94)]
+
     return body_pins
 
 
@@ -132,7 +146,7 @@ def pdf_to_dataframe(folder, pdf_filename):
     df = extract_text(folder, pdf_filename)
 
     system_name = get_system_name(df)
-    df = join_incorect_rows(df, system_name)  # TODO: joins all rows with same name, needs repairs
+    df = join_incorect_rows(df, system_name)
 
     # Filter first column by system name, drop other columns
     # Dropping all lines too short (usually grid lines of system) and those containing LOCKBASE,
@@ -158,9 +172,7 @@ def pdf_to_dataframe(folder, pdf_filename):
     df['Type'] = df['Type'].apply(lambda x: x.replace(' ', ''))
     df = df.sort_values(by='Number', ascending=True)
     df = df.reset_index(drop=True)
-    # duplicates = df[df.duplicated(subset=['Number', 'Finish', 'Length', 'Type', 'Profile', 'Special_eq'], keep=False)]
-
-    df = df.astype(object)
+    df['Quantity'] = df['Quantity'].astype(int)
     df.loc['System'] = system_name
     logger.info('Order dataframe:\n%s', df.to_string(index=False))
     return df
@@ -174,7 +186,7 @@ def join_incorect_rows(df, system_name):
     # Loop over the rows with the system name
     for _, system_row in system_rows.iterrows():
         # Find the rows from the system row up to the LOCKBASE row
-        if lockbase_rows.index.max() == 0:  # for one page orders
+        if lockbase_rows.index.max() == 0:  # for one-page orders
             relevant_rows = df.loc[system_row.name:]
         else:  # for multiple pages, relevant rows are only until end of a page ('lackbase')
             next_index = lockbase_rows.loc[lockbase_rows.index > system_row.name].index[0] - 1
@@ -231,6 +243,7 @@ def get_system_name(df):
 def shift_if_length_missing(row):
     # shifts row to the right if length value is missing (padlocks)
     pattern = r'^[-G\d\s]+$'
+
     if not bool(re.match(pattern, row[2])):
         return [row[0], row[1], ''] + list(row[2:7])
     else:
@@ -254,10 +267,11 @@ def shift_if_finish_missing(row):
         return list(row[0:8])
 
 
-def add_order_pinning(order_df, system_df):
+def add_order_pinning(order_df, system_df): # TODO: to many positions after merge
     # Adds pinns to order from pdf by merging with system dataframe
-    merged_df = pd.merge(order_df, system_df, on=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq']) #TODO: merge niepoprawny, sprawdzać quantity?
-    merged_df.drop(columns=['Others', 'Date', 'Sys_quantity'], inplace=True)
+    merged_df = pd.merge(order_df, system_df, on=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq',
+                                                  'Quantity'])
+    merged_df.drop(columns=['Others', 'Date', 'Quantity'], inplace=True)
     merged_df.index += 1
     merged_df.loc['System'] = order_df.loc['System']
 
@@ -293,7 +307,7 @@ def create_aps_file(df, folder_path):
                      '9': 'A_U09'}
 
     body_pins_dict = {'0': 'A_K00', '1': 'A_K01', '2': 'A_K02'}
-
+    print(type_dict, cylinder_pins_dict, ext_pins_dict, body_pins_dict)
     with open(folder_path, 'w') as f:
         contents = df.to_csv(index=False)
         f.write(contents)
@@ -309,7 +323,7 @@ def create_aps_pdf(automatic, folder_path):
     pdf_file = 'data.pdf'
     doc = SimpleDocTemplate(pdf_file, pagesize=letter)
     data = [df.columns] + df.values.tolist()
-
+    print(folder_path, doc)
     table = Table(data, colWidths=[1.5 * inch] * 5)
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.gray),
@@ -327,6 +341,43 @@ def create_aps_pdf(automatic, folder_path):
 
 
 def create_non_aps_pdf(manual, folder_path):
+    print(manual, folder_path)
     # print(manual.drop('System'))
     return ' --non aps pdf file created successfully-- '
-# TODO: make system indexes  numbered after sorting
+
+def fill_missing_pins(df, x):
+    new_df = df.copy()
+    # Loop through each list of strings in the DataFrame column
+    for i in range(len(new_df['Extension_pins_sums'])):
+        # Get the current list of strings and its length
+        curr_list = new_df['Extension_pins_sums'][i]
+        curr_len = len(curr_list)
+
+        # Loop through each string in the current list
+        for j in range(curr_len):
+            # Get the current string and its length
+            curr_str = curr_list[j]
+            str_len = len(curr_str)
+
+            # If the current string is shorter than x, add empty values to the end
+            if str_len < x:
+                curr_str += ' ' * (x - str_len)
+
+            # If this is the first string in the list, use the corresponding string from the Cylinder_pins column to fill in missing values
+            if j == 0:
+                for k in range(x):
+                    if curr_str[k] == ' ':
+                        curr_str = curr_str[:k] + new_df['Cylinder_pins'][i][k] + curr_str[k + 1:]
+            # If there is a previous string in the same list, use it to fill in missing values
+            elif j > 0:
+                for k in range(x):
+                    if curr_str[k] == ' ':
+                        curr_str = curr_str[:k] + curr_list[j - 1][k] + curr_str[k + 1:]
+
+            # Update the current string in the list with the modified string
+            curr_list[j] = curr_str
+
+        # Update the DataFrame with the modified list of strings
+        new_df.at[i, 'Extension_pins_sums'] = curr_list
+
+    return  new_df
