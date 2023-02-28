@@ -18,7 +18,7 @@
         <div class="mt-5 justify-content-center mx-auto col-6  ">
             <h2 class=" text-center ">Do wykonania na APS:</h2>
             <pre class=" table-responsive ">
-                        {{ automatic_data[['Number', 'Finish', 'Length','Profile','Quantity', 'Type', 'Special_eq']].drop('System').to_html(index=True,classes='table-striped table-bordered', header=True)|safe }}
+                        {{ automatic_data[['Number', 'Finish', 'Length','Profile', 'Quantity','Type', 'Special_eq']].drop('System').to_html(index=True,classes='table-striped table-bordered', header=True)|safe }}
                   </pre>
         </div>
 

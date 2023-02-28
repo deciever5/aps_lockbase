@@ -66,10 +66,10 @@ def create_aps_file():
     automatic, manual = models.split_order(selected_fields)
 
     aps_file = models.create_aps_file(automatic, app.config['APS_FOLDER'])
-    aps_pdf = models.create_aps_pdf(automatic, app.config['UPLOAD_FOLDER'])
-    non_aps_pdf = models.create_non_aps_pdf(manual, app.config['UPLOAD_FOLDER'])
+    # aps_pdf = models.create_aps_pdf(automatic, app.config['UPLOAD_FOLDER'])
+    # non_aps_pdf = models.create_non_aps_pdf(manual, app.config['UPLOAD_FOLDER'])
 
-    print(aps_pdf, aps_file, non_aps_pdf)
+    # print(aps_pdf, aps_file, non_aps_pdf)
 
     return render_template('conversion_done.html')
 
