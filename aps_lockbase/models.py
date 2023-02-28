@@ -265,7 +265,7 @@ def shift_if_finish_missing(row):
         return list(row[0:8])
 
 
-def add_order_pinning(order_df, system_df):  # TODO: to many positions after merge
+def add_order_pinning(order_df, system_df):
     # Adds pinns to order from pdf by merging with system dataframe
     system_df = system_df.drop_duplicates(
         subset=['Number', 'Finish', 'Length', 'Profile', 'Type', 'Special_eq', 'Quantity'], keep='last')
