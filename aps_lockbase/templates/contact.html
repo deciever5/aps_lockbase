@@ -1,0 +1,140 @@
+ {% extends "index.html" %}
+
+{% block content %}
+
+<head>
+    <title>Contact Us</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" integrity="sha512-+4zCK9k+qNFUR5X+cKL9EIR+ZOhtIloNl9GIKS57V1MyNsYpYcUrUeQc9vNfzsWfV28IaLL3i96P9sdNyeRssA==" crossorigin="anonymous" />
+    <style>
+        /* Add your own custom styles here */
+        .contact-section {
+            background-color: #f9f9f9;
+            padding: 50px 0;
+        }
+        .contact-section h2 {
+            font-size: 36px;
+            margin-bottom: 30px;
+        }
+        .contact-info {
+            margin-bottom: 20px;
+        }
+        .contact-info i {
+            font-size: 32px;
+            color: #0275d8;
+            margin-right: 15px;
+        }
+        .social-icons {
+            margin-top: 25px;
+        }
+        .social-icons a {
+            font-size: 32px;
+            margin-right: 15px;
+        color: #0275d8;
+        transition: all 0.3s ease-in-out;
+        }
+        .social-icons a:hover {
+        color: #333;
+        text-decoration: none;
+        }
+        .form-control {
+        border-radius: 0;
+        border: 2px solid #ccc;
+        padding: 12px 20px;
+        font-size: 18px;
+        margin-bottom: 20px;
+        box-shadow: none;
+        }
+        .form-control:focus {
+        border-color: #0275d8;
+        box-shadow: none;
+        }
+        .form-control::placeholder {
+        color: #ccc;
+        font-size: 18px;
+        }
+        textarea.form-control {
+        height: 200px;
+        }
+        .form-group button[type="submit"] {
+        background-color: #0275d8;
+        border: none;
+        color: #fff;
+        padding: 12px 40px;
+        font-size: 20px;
+        border-radius: 50px;
+        transition: all 0.3s ease-in-out;
+        }
+        .form-group button[type="submit"]:hover {
+        background-color: #01447e;
+        cursor: pointer;
+        }
+</style>
+</head>
+<body>
+    <section class="  contact-section ">
+        <div class=" container">
+            <div class="row">
+                <div class="  col-md-6">
+                    <h2 class = "hide contact-info">Skontaktuj się</h2>
+                    <form class=" contact-form " method="POST" action="{{url_for('contact')}}">
+                        <div class="contact-info hide form-group">
+                            <input type="text" class="form-control" id="name" placeholder="Imię" required>
+                        </div>
+                        <div class="contact-info hide form-group">
+                            <input type="email" class="form-control" id="email" placeholder="Email" required>
+                        </div>
+                        <div class="contact-info hide form-group">
+                            <input type="tel" class="form-control" id="phone" placeholder="Telefon">
+                        </div>
+                        <div class="contact-info hide form-group">
+                            <textarea class="form-control" id="message" rows="3" placeholder="Wiadomość" required></textarea>
+                        </div>
+                        <button type="submit" class="hide contact-info btn btn-primary">Wyślij wiadomość</button>
+                    </form>
+                </div>
+
+                <div class=" col-md-6 ">
+                    <h2 class = "hide contact-info">Informacja kontaktowa</h2>
+                    <div class=" hide contact-info">
+                        <i class=" fas fa-map-marker-alt"></i>
+                         <p>Assa Abloy Opening Solutions Poland</p>
+                        <p>64-100 Leszno,ul. Magazynowa 4, Polska</p>
+                        <p>Marcin Kunikowski, Manager ds. automatyzacji</p>
+                    </div>
+                    <div class=" hide contact-info">
+                        <i class=" fas fa-phone"></i>
+                        <p>+48 666 079 638 wew. 817</p>
+                    </div>
+                    <div class=" hide contact-info">
+                        <i class="fas fa-envelope"></i>
+                        <p>marcin.kunikowski@assaabloy.com</p>
+                    </div>
+
+                </div>
+            </div>
+</div>
+</section>
+<script>
+var contactInfoElements = document.querySelectorAll('.contact-info');
+
+// Set the initial delay time
+var delay = 0.20;
+
+// Loop through each element and add a delay before fading in
+contactInfoElements.forEach(function(element) {
+    element.style.transition = "opacity 1s ease-in-out " + delay + "s";
+    element.style.opacity = 0;
+    setTimeout(function() {
+        element.style.opacity = 1;
+    }, delay * 500);
+    delay += 0.2;
+});
+
+</script>
+</body>
+
+
+
+
+{% endblock %}

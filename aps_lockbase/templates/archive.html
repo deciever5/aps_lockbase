@@ -1,0 +1,33 @@
+{% extends "index.html" %}
+
+{% block content %}
+
+<body>
+    <div class="container">
+        <h1 class="text-center mt-5">Archive</h1>
+        <table class="table table-striped mt-5">
+            <thead>
+                <tr>
+                    <th>File Name</th>
+                    <th>File Size</th>
+                    <th>Upload date</th>
+                    <th>Download</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for file in files %}
+                <tr>
+                    <td>{{ file.name }}</td>
+                    <td>{{ file.size }} bytes</td>
+                    <td>{{ file.date }} </td>
+                    <td><a href="{{ url_for('archive', filename=file.name) }}" class="btn btn-primary" download="{{ file.name }}">Download</a></td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+
+
+{% endblock %}
