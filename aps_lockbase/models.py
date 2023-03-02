@@ -17,6 +17,23 @@ from werkzeug.utils import secure_filename
 
 from dto import dto
 
+# pin definitions for aps file
+type_dict = {'PL': ['KMM5', 'KMM51'],
+             'CL': ['ZKT2', 'ZKT22A2', 'ZKT21'],
+             'DC EU': ['LC+XT', 'LOXT', 'LC', 'WS', 'WA'],
+             'BC EU': ['LOGXT', 'LCG'],
+             'HC EU': ['LCJ+XT', 'LOJXT', 'WJ'],
+             'HC R': ['TB61', 'TB51', 'UTB617']
+             }
+
+cylinder_pins_dict = {'0': 'A_B00', '1': 'A_B01', '2': 'A_B02', '3': 'A_B03', '4': 'A_B04', '5': 'A_B05',
+                      '6': 'A_B06', '7': 'A_B07', '8': 'A_B08', '9': 'A_B09', 'a': 'A_B0A', 'b': 'A_B0B'}
+
+ext_pins_dict = {'2': 'A_U02', '3': 'A_U03', '4': 'A_U04', '5': 'A_U05', '6': 'A_U06', '7': 'A_U07', '8': 'A_U08',
+                 '9': 'A_U09', '10': 'A_K00'}
+
+body_pins_dict = {'0': 'A_K00', '1': 'A_K01', '2': 'A_K02'}
+
 # Create logger object
 logger = logging.getLogger(__name__)
 # Set log level to INFO or desired level
@@ -368,38 +385,45 @@ def create_aps_file(df, folder_path):
     file_name = f'{table_name}_{today}.txt'
     folder_path = folder_path + file_name
     order_num = random.randint(1, 100)  # TODO: implement order number and storage
-    type_dict = {'PL': ['KMM5', 'KMM51'], 'CL': ['ZKT2', 'ZKT22A2', 'ZKT21'],
-                 'DC EU': ['LC+XT', 'LOXT', 'LC', 'WS', 'WA'], 'BC EU': ['LOGXT', 'LCG'],
-                 'HC EU': ['LCJ+XT', 'LOJXT', 'WJ'], 'HC R': ['TB61', 'TB51', 'UTB617']}
-    #TODO: add length to type code
 
-    cylinder_pins_dict = {'0': 'A_B00', '1': 'A_B01', '2': 'A_B02', '3': 'A_B03', '4': 'A_B04', '5': 'A_B05',
-                          '6': 'A_B06', '7': 'A_B07', '8': 'A_B08', '9': 'A_B09', '10': 'A_B0A', '11': 'A_B0B'}
 
-    ext_pins_dict = {'2': 'A_U02', '3': 'A_U03', '4': 'A_U04', '5': 'A_U05', '6': 'A_U06', '7': 'A_U07', '8': 'A_U08',
-                     '9': 'A_U09'}
 
-    body_pins_dict = {'0': 'A_K00', '1': 'A_K01', '2': 'A_K02'}
+
 
     with open(folder_path, 'w') as f:
         f.write(f"{order_num};{table_name};{date};0\n")
         # Loop through all rows except last one containing system name
         for index, row in df.iloc[:-1].iterrows():
             # Extract the required data from the row
-            type_code = next((k for k, v in type_dict.items() if row['Type'] in v), 'Brak typu w bazie')
+            type_code = next((k for k, v in type_dict.items() if row['Type'] in v), 'Brak typu')
+            # Extract and refactor length
+            length = get_length(type_code, row['Length'])
+
             number = row['Number']
             # Write the data to the file, times the number of quantity ordered
-            for i in range(row['Quantity']): #TODO: check quantity loop for A190 24
-                f.write(f"#{type_code},{number},1,{order_num}\n")
+            for i in range(row['Quantity']):
+                f.write(f"#{type_code}{length};{number};1;{order_num}\n")
                 for i in range(len(row['Body_pins'])):
                     extension_pins = ''
                     for j in range(len(row['Extension_pins'])):
                         if str(row['Extension_pins'][j][i]) != '0':
-                            extension_pins += f"{ext_pins_dict.get(str(row['Extension_pins'][j][i]), 'Brak kołka w bazie')};"
-                    cylinder_pins = cylinder_pins_dict.get(row['Cylinder_pins'][i], None)
-                    body_pins = body_pins_dict.get(str(row['Body_pins'][i]), None)
-                    #f.write(f"{row['Cylinder_pins'][i]};{extension_pins}{type(row['Body_pins'][i])}\n")
+                            extension_pins += f"{ext_pins_dict.get(str(row['Extension_pins'][j][i]), 'Brak pinów')};"
+                    cylinder_pins = cylinder_pins_dict.get(row['Cylinder_pins'][i], 'Brak pinu')
+                    body_pins = body_pins_dict.get(str(row['Body_pins'][i]), 'Brak pinu')
+
                     f.write(f"{cylinder_pins};{extension_pins}{body_pins}\n")
         print(f"APS file saved to {folder_path}")
 
         return '--aps file created successfully-- '
+
+
+def get_length(type_code, row_len):
+    if type_code == 'HC EU':
+        length = '.' + max(row_len.split('-'))
+    elif type_code == 'DC EU':
+        length = '.' + '/'.join(row_len.split('-'))
+    elif type_code == 'BC EU':
+        length = '.' + '/'.join(row_len.split('-').str.replace('G', ''))
+    else:
+        length = ''
+    return length
