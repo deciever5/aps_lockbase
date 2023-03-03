@@ -380,18 +380,14 @@ def fill_missing_pins(df, x):
 def create_aps_file(df, folder_path):
     # create filename and forlder path for coverterd  txt file
     table_name = df.loc['System', 'Number']
-    date = datetime.today().strftime('%d-%m-%Y')
+    date = datetime.today().strftime('%d.%m.%Y')
     today = datetime.today().strftime('%d-%m-%Y--%H-%M')
     file_name = f'{table_name}_{today}.txt'
     folder_path = folder_path + file_name
     order_num = random.randint(1, 100)  # TODO: implement order number and storage
 
-
-
-
-
     with open(folder_path, 'w') as f:
-        f.write(f"{order_num};{table_name};{date};0\n")
+        f.write(f"{order_num};{date};0\n")
         # Loop through all rows except last one containing system name
         for index, row in df.iloc[:-1].iterrows():
             # Extract the required data from the row
@@ -401,17 +397,17 @@ def create_aps_file(df, folder_path):
 
             number = row['Number']
             # Write the data to the file, times the number of quantity ordered
-            for i in range(row['Quantity']):
-                f.write(f"#{type_code}{length};{number};1;{order_num}\n")
-                for i in range(len(row['Body_pins'])):
-                    extension_pins = ''
-                    for j in range(len(row['Extension_pins'])):
-                        if str(row['Extension_pins'][j][i]) != '0':
-                            extension_pins += f"{ext_pins_dict.get(str(row['Extension_pins'][j][i]), 'Brak pinów')};"
-                    cylinder_pins = cylinder_pins_dict.get(row['Cylinder_pins'][i], 'Brak pinu')
-                    body_pins = body_pins_dict.get(str(row['Body_pins'][i]), 'Brak pinu')
+            f.write(f"#{type_code}{length};{number};{row['Quantity']};{order_num}\n")
+            f.write(f"system {table_name}\n")
+            for i in range(len(row['Body_pins'])):
+                extension_pins = ''
+                for j in range(len(row['Extension_pins'])):
+                    if str(row['Extension_pins'][j][i]) != '0':
+                        extension_pins += f"{ext_pins_dict.get(str(row['Extension_pins'][j][i]), 'Brak pinów')};"
+                cylinder_pins = cylinder_pins_dict.get(row['Cylinder_pins'][i], 'Brak pinu')
+                body_pins = body_pins_dict.get(str(row['Body_pins'][i]), 'Brak pinu')
 
-                    f.write(f"{cylinder_pins};{extension_pins}{body_pins}\n")
+                f.write(f"{cylinder_pins};{extension_pins}{body_pins}\n")
         print(f"APS file saved to {folder_path}")
 
         return '--aps file created successfully-- '
@@ -419,11 +415,11 @@ def create_aps_file(df, folder_path):
 
 def get_length(type_code, row_len):
     if type_code == 'HC EU':
-        length = '.' + max(row_len.split('-'))
+        length = '.' + str(max([int(val) for val in row_len.split('-')]))
     elif type_code == 'DC EU':
         length = '.' + '/'.join(row_len.split('-'))
     elif type_code == 'BC EU':
-        length = '.' + '/'.join(row_len.split('-').str.replace('G', ''))
+        length = '.' + '/'.join(val.replace('G', '') for val in row_len.split('-'))
     else:
         length = ''
     return length
